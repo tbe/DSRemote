@@ -25,53 +25,28 @@
 ***************************************************************************
 */
 
-
 #ifndef TMC_DEV_H
 #define TMC_DEV_H
-
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
 struct tmcdev
 {
-  int fd;
-  char *hdrbuf;
-  char *buf;
-  int sz;
+    int fd;
+    char *hdrbuf;
+    char *buf;
+    int sz;
 };
 
-
-struct tmcdev * tmcdev_open(const char *);
+struct tmcdev *tmcdev_open(const char *);
 void tmcdev_close(struct tmcdev *);
 int tmcdev_write(struct tmcdev *, const char *);
 int tmcdev_read(struct tmcdev *);
-
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

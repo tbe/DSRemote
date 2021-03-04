@@ -25,48 +25,31 @@
 ***************************************************************************
 */
 
-
 #include "lan_connect_thread.h"
-
 
 lan_connect_thread::lan_connect_thread()
 {
-  device = NULL;
+    device = NULL;
 
-  dev_str[0] = 0;
+    dev_str[0] = 0;
 }
-
 
 void lan_connect_thread::run()
 {
-  msleep(300);
+    msleep(300);
 
-  if(dev_str[0] == 0) return;
+    if (dev_str[0] == 0)
+        return;
 
-  device = tmc_open_lan(dev_str);
+    device = tmc_open_lan(dev_str);
 }
 
-
-struct tmcdev * lan_connect_thread::get_device(void)
+struct tmcdev *lan_connect_thread::get_device(void)
 {
-  return device;
+    return device;
 }
-
 
 void lan_connect_thread::set_device_address(const char *addr)
 {
-  strlcpy(dev_str, addr, 64);
+    strlcpy(dev_str, addr, 64);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

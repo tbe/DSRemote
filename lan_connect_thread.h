@@ -25,10 +25,8 @@
 ***************************************************************************
 */
 
-
 #ifndef DEF_LAN_CONNECT_THREAD_H
 #define DEF_LAN_CONNECT_THREAD_H
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,55 +36,27 @@
 #include <QObject>
 #include <QThread>
 
-#include "global.h"
-#include "utils.h"
 #include "connection.h"
+#include "global.h"
 #include "tmc_dev.h"
-
-
+#include "utils.h"
 
 class lan_connect_thread : public QThread
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
+    lan_connect_thread();
 
-  lan_connect_thread();
-
-  void set_device_address(const char *);
-  struct tmcdev * get_device(void);
+    void set_device_address(const char *);
+    struct tmcdev *get_device(void);
 
 private:
+    char dev_str[256];
 
-  char dev_str[256];
+    struct tmcdev *device;
 
-  struct tmcdev *device;
-
-  void run();
+    void run();
 };
 
-
-
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

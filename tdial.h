@@ -25,87 +25,69 @@
 ***************************************************************************
 */
 
-
-
 #ifndef T_DIAL_H
 #define T_DIAL_H
 
-#include <QtGlobal>
-#include <QObject>
-#include <QWidget>
-#include <QPainter>
-#include <QMouseEvent>
-#include <QColor>
 #include <QBrush>
+#include <QColor>
+#include <QMouseEvent>
+#include <QObject>
+#include <QPainter>
 #include <QRadialGradient>
+#include <QWidget>
+#include <QtGlobal>
 
-
-
-class TDial: public QWidget
+class TDial : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  TDial(QWidget *parent=0);
+    TDial(QWidget *parent = 0);
 
-  QSize sizeHint() const {return minimumSizeHint(); }
-  QSize minimumSizeHint() const {return QSize(80,80); }
+    QSize sizeHint() const { return minimumSizeHint(); }
+    QSize minimumSizeHint() const { return QSize(80, 80); }
 
-  void set_fg_color(QColor);
-  void set_bg_color(QColor);
-  QColor get_fg_color(void);
-  QColor get_bg_color(void);
-  void setWrapping(bool);
-  void setEnabled(bool);
-  void setNotchesVisible(bool);
-  void setMaximum(int);
-  void setMinimum(int);
-  void setValue(int);
-  int value(void);
-  void setSingleStep(int);
-  bool isSliderDown(void);
-  void setSliderPosition(int);
+    void set_fg_color(QColor);
+    void set_bg_color(QColor);
+    QColor get_fg_color(void);
+    QColor get_bg_color(void);
+    void setWrapping(bool);
+    void setEnabled(bool);
+    void setNotchesVisible(bool);
+    void setMaximum(int);
+    void setMinimum(int);
+    void setValue(int);
+    int value(void);
+    void setSingleStep(int);
+    bool isSliderDown(void);
+    void setSliderPosition(int);
 
 private:
+    int dval, dval_old, dmin, dmax, step;
 
-  int dval,
-      dval_old,
-      dmin,
-      dmax,
-      step;
+    double dial_grad, mouse_grad_old, degr_per_step;
 
-  double dial_grad,
-         mouse_grad_old,
-         degr_per_step;
+    bool wrap, notch_visible, slider_down, enabled;
 
-  bool wrap,
-       notch_visible,
-       slider_down,
-       enabled;
+    QColor fg_color, bg_color;
 
-  QColor fg_color,
-         bg_color;
-
-  void draw_circ(int, int, int, QPainter *);
-  void draw_fill_circ(int, int, int, QPainter *);
-  double polar_to_degr(double, double);
-  void process_rotation(void);
+    void draw_circ(int, int, int, QPainter *);
+    void draw_fill_circ(int, int, int, QPainter *);
+    double polar_to_degr(double, double);
+    void process_rotation(void);
 
 public slots:
 
 protected:
-  void paintEvent(QPaintEvent *);
-  void mousePressEvent(QMouseEvent *);
-  void mouseReleaseEvent(QMouseEvent *);
-  void mouseMoveEvent(QMouseEvent *);
-  void wheelEvent(QWheelEvent *);
+    void paintEvent(QPaintEvent *);
+    void mousePressEvent(QMouseEvent *);
+    void mouseReleaseEvent(QMouseEvent *);
+    void mouseMoveEvent(QMouseEvent *);
+    void wheelEvent(QWheelEvent *);
 
 signals:
-   void valueChanged(int);
-   void sliderReleased();
+    void valueChanged(int);
+    void sliderReleased();
 };
 
-
 #endif
-
-

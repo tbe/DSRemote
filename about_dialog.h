@@ -25,62 +25,38 @@
 ***************************************************************************
 */
 
-
-
-
 #ifndef ABOUT_FORM1_H
 #define ABOUT_FORM1_H
 
-
-
-#include <QtGlobal>
 #include <QApplication>
-#include <QObject>
 #include <QDialog>
+#include <QHBoxLayout>
+#include <QObject>
 #include <QPushButton>
 #include <QTextEdit>
-#include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QtGlobal>
 
 #include "global.h"
 #include "mainwindow.h"
 
-
-
 class UI_Aboutwindow : public QObject
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  UI_Aboutwindow();
+    UI_Aboutwindow();
 
 private:
+    QDialog *AboutDialog;
 
-QDialog      *AboutDialog;
+    QPushButton *pushButton1;
 
-QPushButton  *pushButton1;
+    QTextEdit *textedit1;
 
-QTextEdit    *textedit1;
+    QHBoxLayout *hlayout1;
 
-QHBoxLayout  *hlayout1;
-
-QVBoxLayout  *vlayout1;
-
+    QVBoxLayout *vlayout1;
 };
 
-
-
 #endif // ABOUT_FORM1_H
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -25,1433 +25,1306 @@
 ***************************************************************************
 */
 
-
-
 #include "signalcurve.h"
 
 #include "time.h"
 
-
-
-SignalCurve::SignalCurve(QWidget *w_parent) : QWidget(w_parent)
+SignalCurve::SignalCurve(QWidget *w_parent)
+    : QWidget(w_parent)
 {
-  int i;
+    int i;
 
-  mainwindow = (UI_Mainwindow *)w_parent;
+    mainwindow = (UI_Mainwindow *) w_parent;
 
-  setAttribute(Qt::WA_OpaquePaintEvent);
+    setAttribute(Qt::WA_OpaquePaintEvent);
 
-  SignalColor[0] = Qt::blue;
-  SignalColor[1] = Qt::blue;
-  SignalColor[2] = Qt::blue;
-  SignalColor[3] = Qt::blue;
-  tracewidth = 0;
-  BackgroundColor = Qt::gray;
-  RasterColor = Qt::darkGray;
-  TextColor = Qt::black;
+    SignalColor[0] = Qt::blue;
+    SignalColor[1] = Qt::blue;
+    SignalColor[2] = Qt::blue;
+    SignalColor[3] = Qt::blue;
+    tracewidth = 0;
+    BackgroundColor = Qt::gray;
+    RasterColor = Qt::darkGray;
+    TextColor = Qt::black;
 
-  smallfont.setFamily("Arial");
-  smallfont.setPixelSize(8);
+    smallfont.setFamily("Arial");
+    smallfont.setPixelSize(8);
 
-  trig_line_timer = new QTimer(this);
-  trig_line_timer->setSingleShot(true);
+    trig_line_timer = new QTimer(this);
+    trig_line_timer->setSingleShot(true);
 
-  trig_stat_timer = new QTimer(this);
+    trig_stat_timer = new QTimer(this);
 
 #if QT_VERSION >= 0x050000
-  trig_line_timer->setTimerType(Qt::PreciseTimer);
-  trig_stat_timer->setTimerType(Qt::PreciseTimer);
+    trig_line_timer->setTimerType(Qt::PreciseTimer);
+    trig_stat_timer->setTimerType(Qt::PreciseTimer);
 #endif
 
-  bufsize = 0;
-  bordersize = 60;
+    bufsize = 0;
+    bordersize = 60;
 
-  v_sense = 1;
+    v_sense = 1;
 
-  mouse_x = 0;
-  mouse_y = 0;
-  mouse_old_x = 0;
-  mouse_old_y = 0;
+    mouse_x = 0;
+    mouse_y = 0;
+    mouse_old_x = 0;
+    mouse_old_y = 0;
 
-  label_active = LABEL_ACTIVE_NONE;
+    label_active = LABEL_ACTIVE_NONE;
 
-  for(i=0; i<MAX_CHNS; i++)
-  {
-    chan_arrow_moving[i] = 0;
+    for (i = 0; i < MAX_CHNS; i++) {
+        chan_arrow_moving[i] = 0;
 
-    chan_arrow_pos[i] = 127;
+        chan_arrow_pos[i] = 127;
 
-    chan_tmp_y_pixel_offset[i] = 0;
+        chan_tmp_y_pixel_offset[i] = 0;
 
-    chan_tmp_old_y_pixel_offset[i] = 0;
-  }
+        chan_tmp_old_y_pixel_offset[i] = 0;
+    }
 
-  trig_level_arrow_moving = 0;
+    trig_level_arrow_moving = 0;
 
-  trig_pos_arrow_moving = 0;
+    trig_pos_arrow_moving = 0;
 
-  fft_arrow_pos = 0;
+    fft_arrow_pos = 0;
 
-  fft_arrow_moving = 0;
+    fft_arrow_moving = 0;
 
-  trig_line_visible = 0;
+    trig_line_visible = 0;
 
-  trig_stat_flash = 0;
+    trig_stat_flash = 0;
 
-  trig_level_arrow_pos = 127;
+    trig_level_arrow_pos = 127;
 
-  trig_pos_arrow_pos = 100;
+    trig_pos_arrow_pos = 100;
 
-  use_move_events = 0;
+    use_move_events = 0;
 
-  updates_enabled = true;
+    updates_enabled = true;
 
-  old_w = 10000;
+    old_w = 10000;
 
-  devparms = NULL;
+    devparms = NULL;
 
-  device = NULL;
+    device = NULL;
 
-  connect(trig_line_timer, SIGNAL(timeout()), this, SLOT(trig_line_timer_handler()));
-  connect(trig_stat_timer, SIGNAL(timeout()), this, SLOT(trig_stat_timer_handler()));
+    connect(trig_line_timer, SIGNAL(timeout()), this, SLOT(trig_line_timer_handler()));
+    connect(trig_stat_timer, SIGNAL(timeout()), this, SLOT(trig_stat_timer_handler()));
 }
-
 
 void SignalCurve::clear()
 {
-  bufsize = 0;
+    bufsize = 0;
 
-  update();
+    update();
 }
-
 
 void SignalCurve::resizeEvent(QResizeEvent *resize_event)
 {
-  QWidget::resizeEvent(resize_event);
+    QWidget::resizeEvent(resize_event);
 }
-
 
 void SignalCurve::setUpdatesEnabled(bool enabled)
 {
-  updates_enabled = enabled;
+    updates_enabled = enabled;
 }
-
 
 void SignalCurve::paintEvent(QPaintEvent *)
 {
-  if(updates_enabled == true)
-  {
-    QPainter paint(this);
+    if (updates_enabled == true) {
+        QPainter paint(this);
 #if QT_VERSION >= 0x050000
-    paint.setRenderHint(QPainter::Qt4CompatiblePainting, true);
+        paint.setRenderHint(QPainter::Qt4CompatiblePainting, true);
 #endif
 
-    smallfont.setPixelSize(devparms->font_size);
+        smallfont.setPixelSize(devparms->font_size);
 
-    paint.setFont(smallfont);
+        paint.setFont(smallfont);
 
-    drawWidget(&paint, width(), height());
+        drawWidget(&paint, width(), height());
 
-    old_w = width();
-  }
+        old_w = width();
+    }
 }
-
 
 void SignalCurve::drawWidget(QPainter *painter, int curve_w, int curve_h)
 {
-  int i, chn, tmp, rot=1, small_rulers, curve_w_backup, curve_h_backup, w_trace_offset,
-      chns_done;
+    int i, chn, tmp, rot = 1, small_rulers, curve_w_backup, curve_h_backup, w_trace_offset,
+                     chns_done;
 
-  double h_step=0.0,
-         step,
-         step2;
+    double h_step = 0.0, step, step2;
 
-//  clk_start = clock();
+    //  clk_start = clock();
 
-  if(devparms == NULL)
-  {
-    return;
-  }
-
-  curve_w_backup = curve_w;
-
-  curve_h_backup = curve_h;
-
-  small_rulers = 5 * devparms->hordivisions;
-
-  painter->fillRect(0, 0, curve_w, curve_h, BackgroundColor);
-
-  if((curve_w < ((bordersize * 2) + 5)) || (curve_h < ((bordersize * 2) + 5)))
-  {
-    return;
-  }
-
-  painter->fillRect(0, 0, curve_w, 30, QColor(32, 32, 32));
-
-  drawTopLabels(painter);
-
-  if((devparms->acquirememdepth > 1000) && !devparms->timebasedelayenable)
-  {
-    tmp = 405 - ((devparms->timebaseoffset / (devparms->acquirememdepth / devparms->samplerate)) * 233);
-  }
-  else
-  {
-    tmp = 405 - ((devparms->timebaseoffset / ((double)devparms->timebasescale * (double)devparms->hordivisions)) * 233);
-  }
-
-  if(tmp < 289)
-  {
-    tmp = 284;
-
-    rot = 2;
-  }
-  else if(tmp > 521)
-    {
-      tmp = 526;
-
-      rot = 0;
+    if (devparms == NULL) {
+        return;
     }
 
-  if((rot == 0) || (rot == 2))
-  {
-    drawSmallTriggerArrow(painter, tmp, 11, rot, QColor(255, 128, 0));
-  }
-  else
-  {
-    drawSmallTriggerArrow(painter, tmp, 16, rot, QColor(255, 128, 0));
-  }
+    curve_w_backup = curve_w;
 
-  painter->fillRect(0, curve_h - 30, curve_w, curve_h, QColor(32, 32, 32));
+    curve_h_backup = curve_h;
 
-  for(i=0; i<devparms->channel_cnt; i++)
-  {
-    drawChanLabel(painter, 8 + (i * 130), curve_h - 25, i);
-  }
+    small_rulers = 5 * devparms->hordivisions;
 
-  if(devparms->connected && devparms->show_fps)
-  {
-    drawfpsLabel(painter, curve_w - 80, curve_h - 11);
-  }
+    painter->fillRect(0, 0, curve_w, curve_h, BackgroundColor);
 
-/////////////////////////////////// translate coordinates, draw and fill a rectangle ///////////////////////////////////////////
-
-  painter->translate(bordersize, bordersize);
-
-  curve_w -= (bordersize * 2);
-
-  curve_h -= (bordersize * 2);
-
-  if(devparms->math_fft && devparms->math_fft_split)
-  {
-    curve_h /= 3;
-  }
-
-/////////////////////////////////// draw the rasters ///////////////////////////////////////////
-
-  painter->setPen(RasterColor);
-
-  painter->drawRect (0, 0, curve_w - 1, curve_h - 1);
-
-  if((devparms->math_fft == 0) || (devparms->math_fft_split == 0))
-  {
-    if(devparms->displaygrid)
-    {
-      painter->setPen(QPen(QBrush(RasterColor, Qt::SolidPattern), tracewidth, Qt::DotLine, Qt::SquareCap, Qt::BevelJoin));
-
-      if(devparms->displaygrid == 2)
-      {
-        step = (double)curve_w / (double)devparms->hordivisions;
-
-        for(i=1; i<devparms->hordivisions; i++)
-        {
-          painter->drawLine(step * i, curve_h - 1, step * i, 0);
-        }
-
-        step = curve_h / (double)devparms->vertdivisions;
-
-        for(i=1; i<devparms->vertdivisions; i++)
-        {
-          painter->drawLine(0, step * i, curve_w - 1, step * i);
-        }
-      }
-      else
-      {
-        painter->drawLine(curve_w / 2, curve_h - 1, curve_w / 2, 0);
-
-        painter->drawLine(0, curve_h / 2, curve_w - 1, curve_h / 2);
-      }
+    if ((curve_w < ((bordersize * 2) + 5)) || (curve_h < ((bordersize * 2) + 5))) {
+        return;
     }
+
+    painter->fillRect(0, 0, curve_w, 30, QColor(32, 32, 32));
+
+    drawTopLabels(painter);
+
+    if ((devparms->acquirememdepth > 1000) && !devparms->timebasedelayenable) {
+        tmp = 405
+              - ((devparms->timebaseoffset / (devparms->acquirememdepth / devparms->samplerate))
+                 * 233);
+    } else {
+        tmp = 405
+              - ((devparms->timebaseoffset
+                  / ((double) devparms->timebasescale * (double) devparms->hordivisions))
+                 * 233);
+    }
+
+    if (tmp < 289) {
+        tmp = 284;
+
+        rot = 2;
+    } else if (tmp > 521) {
+        tmp = 526;
+
+        rot = 0;
+    }
+
+    if ((rot == 0) || (rot == 2)) {
+        drawSmallTriggerArrow(painter, tmp, 11, rot, QColor(255, 128, 0));
+    } else {
+        drawSmallTriggerArrow(painter, tmp, 16, rot, QColor(255, 128, 0));
+    }
+
+    painter->fillRect(0, curve_h - 30, curve_w, curve_h, QColor(32, 32, 32));
+
+    for (i = 0; i < devparms->channel_cnt; i++) {
+        drawChanLabel(painter, 8 + (i * 130), curve_h - 25, i);
+    }
+
+    if (devparms->connected && devparms->show_fps) {
+        drawfpsLabel(painter, curve_w - 80, curve_h - 11);
+    }
+
+    /////////////////////////////////// translate coordinates, draw and fill a rectangle ///////////////////////////////////////////
+
+    painter->translate(bordersize, bordersize);
+
+    curve_w -= (bordersize * 2);
+
+    curve_h -= (bordersize * 2);
+
+    if (devparms->math_fft && devparms->math_fft_split) {
+        curve_h /= 3;
+    }
+
+    /////////////////////////////////// draw the rasters ///////////////////////////////////////////
 
     painter->setPen(RasterColor);
 
-    step = (double)curve_w / (double)small_rulers;
+    painter->drawRect(0, 0, curve_w - 1, curve_h - 1);
 
-    for(i=1; i<small_rulers; i++)
-    {
-      step2 = step * i;
+    if ((devparms->math_fft == 0) || (devparms->math_fft_split == 0)) {
+        if (devparms->displaygrid) {
+            painter->setPen(QPen(QBrush(RasterColor, Qt::SolidPattern),
+                                 tracewidth,
+                                 Qt::DotLine,
+                                 Qt::SquareCap,
+                                 Qt::BevelJoin));
 
-      if(devparms->displaygrid)
-      {
-        painter->drawLine(step2, curve_h / 2 + 2, step2, curve_h / 2 - 2);
-      }
+            if (devparms->displaygrid == 2) {
+                step = (double) curve_w / (double) devparms->hordivisions;
 
-      if(i % 5)
-      {
-        painter->drawLine(step2, curve_h - 1, step2, curve_h - 5);
+                for (i = 1; i < devparms->hordivisions; i++) {
+                    painter->drawLine(step * i, curve_h - 1, step * i, 0);
+                }
 
-        painter->drawLine(step2, 0, step2, 4);
-      }
-      else
-      {
-        painter->drawLine(step2, curve_h - 1, step2, curve_h - 9);
+                step = curve_h / (double) devparms->vertdivisions;
 
-        painter->drawLine(step2, 0, step2, 8);
-      }
-    }
+                for (i = 1; i < devparms->vertdivisions; i++) {
+                    painter->drawLine(0, step * i, curve_w - 1, step * i);
+                }
+            } else {
+                painter->drawLine(curve_w / 2, curve_h - 1, curve_w / 2, 0);
 
-    step = curve_h / (5.0 * devparms->vertdivisions);
-
-    for(i=1; i<(5 * devparms->vertdivisions); i++)
-    {
-      step2 = step * i;
-
-      if(devparms->displaygrid)
-      {
-        painter->drawLine(curve_w / 2 + 2, step2, curve_w / 2  - 2, step2);
-      }
-
-      if(i % 5)
-      {
-        painter->drawLine(curve_w - 1, step2, curve_w - 5, step2);
-
-        painter->drawLine(0, step2, 4, step2);
-      }
-      else
-      {
-        painter->drawLine(curve_w - 1, step2, curve_w - 9, step2);
-
-        painter->drawLine(0, step2, 8, step2);
-      }
-    }
-  }  // if((devparms->math_fft == 0) || (devparms->math_fft_split == 0))
-  else
-  {
-    painter->drawLine(curve_w / 2, curve_h - 1, curve_w / 2, 0);
-
-    painter->drawLine(0, curve_h / 2, curve_w - 1, curve_h / 2);
-  }
-
-/////////////////////////////////// draw the arrows ///////////////////////////////////////////
-
-  if(devparms->modelserie == 6)
-  {
-    v_sense = -((double)curve_h / 256.0);
-  }
-  else if(devparms->modelserie == 4)
-    {
-      v_sense = -((double)curve_h / (32.0 * devparms->vertdivisions));
-    }
-    else
-    {
-      v_sense = -((double)curve_h / (25.0 * devparms->vertdivisions));
-    }
-
-  drawTrigCenterArrow(painter, curve_w / 2, 0);
-
-  for(chn=0; chn<devparms->channel_cnt; chn++)
-  {
-    if(!devparms->chandisplay[chn])
-    {
-      continue;
-    }
-
-    if(chan_arrow_moving[chn])
-    {
-      drawArrow(painter, 0, chan_arrow_pos[chn], 0, SignalColor[chn], '1' + chn);
-    }
-    else
-    {
-      chan_arrow_pos[chn] =  (curve_h / 2) - (devparms->chanoffset[chn] / ((devparms->chanscale[chn] * devparms->vertdivisions) / curve_h));
-
-      if(chan_arrow_pos[chn] < 0)
-      {
-        chan_arrow_pos[chn] = -1;
-
-        drawArrow(painter, -6, chan_arrow_pos[chn], 3, SignalColor[chn], '1' + chn);
-      }
-      else if(chan_arrow_pos[chn] > curve_h)
-        {
-          chan_arrow_pos[chn] = curve_h + 1;
-
-          drawArrow(painter, -6, chan_arrow_pos[chn], 1, SignalColor[chn], '1' + chn);
-        }
-        else
-        {
-          drawArrow(painter, 0, chan_arrow_pos[chn], 0, SignalColor[chn], '1' + chn);
-        }
-    }
-  }
-
-/////////////////////////////////// FFT: draw the curve ///////////////////////////////////////////
-
-  if((devparms->math_fft == 1) && (devparms->math_fft_split == 0))
-  {
-    drawFFT(painter, curve_h_backup, curve_w_backup);
-  }
-
-/////////////////////////////////// draw the curve ///////////////////////////////////////////
-
-  if(bufsize > 32)
-  {
-    painter->setClipping(true);
-    painter->setClipRegion(QRegion(0, 0, curve_w, curve_h), Qt::ReplaceClip);
-
-    h_step = (double)curve_w / (devparms->hordivisions * 100);
-
-    for(chn=0, chns_done=0; chn<=devparms->channel_cnt; chn++)
-    {
-      if(chns_done)  break;
-
-      if(chn == devparms->activechannel)  continue;
-
-      if(chn == devparms->channel_cnt)
-      {
-        chn = devparms->activechannel;
-
-        chns_done = 1;
-      }
-
-      if(!devparms->chandisplay[chn])
-      {
-        continue;
-      }
-
-      w_trace_offset = (curve_w / 2.0) - (((devparms->timebaseoffset - devparms->xorigin[chn]) / devparms->timebasescale) * ((double)curve_w / (double)(devparms->hordivisions)));
-
-      painter->setPen(QPen(QBrush(SignalColor[chn], Qt::SolidPattern), tracewidth, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin));
-
-      for(i=0; i<bufsize; i++)
-      {
-        if(bufsize < (curve_w / 2))
-        {
-          painter->drawLine(i * h_step + w_trace_offset,
-                            (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn],
-                            (i + 1) * h_step + w_trace_offset,
-                            (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn]);
-          if(i)
-          {
-            painter->drawLine(i * h_step + w_trace_offset,
-                              (devparms->wavebuf[chn][i - 1] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn],
-                              i * h_step + w_trace_offset,
-                              (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn]);
-          }
-        }
-        else
-        {
-          if(i < (bufsize - 1))
-          {
-            if(devparms->displaytype)
-            {
-              painter->drawPoint(i * h_step + w_trace_offset,
-                                 (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn]);
+                painter->drawLine(0, curve_h / 2, curve_w - 1, curve_h / 2);
             }
-            else
-            {
-              painter->drawLine(i * h_step + w_trace_offset,
-                                (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn],
-                                (i + 1) * h_step + w_trace_offset,
-                                (devparms->wavebuf[chn][i + 1] * v_sense) + (curve_h / 2) - chan_tmp_y_pixel_offset[chn]);
+        }
+
+        painter->setPen(RasterColor);
+
+        step = (double) curve_w / (double) small_rulers;
+
+        for (i = 1; i < small_rulers; i++) {
+            step2 = step * i;
+
+            if (devparms->displaygrid) {
+                painter->drawLine(step2, curve_h / 2 + 2, step2, curve_h / 2 - 2);
             }
-          }
+
+            if (i % 5) {
+                painter->drawLine(step2, curve_h - 1, step2, curve_h - 5);
+
+                painter->drawLine(step2, 0, step2, 4);
+            } else {
+                painter->drawLine(step2, curve_h - 1, step2, curve_h - 9);
+
+                painter->drawLine(step2, 0, step2, 8);
+            }
         }
-      }
-    }
 
-    painter->setClipping(false);
-  }
+        step = curve_h / (5.0 * devparms->vertdivisions);
 
-/////////////////////////////////// draw the decoder ///////////////////////////////////////////
+        for (i = 1; i < (5 * devparms->vertdivisions); i++) {
+            step2 = step * i;
 
-  if(devparms->math_decode_display)  draw_decoder(painter, curve_w, curve_h);
+            if (devparms->displaygrid) {
+                painter->drawLine(curve_w / 2 + 2, step2, curve_w / 2 - 2, step2);
+            }
 
-/////////////////////////////////// draw the trigger arrows ///////////////////////////////////////////
+            if (i % 5) {
+                painter->drawLine(curve_w - 1, step2, curve_w - 5, step2);
 
-  if(trig_level_arrow_moving)
-  {
-    drawArrow(painter, curve_w, trig_level_arrow_pos, 2, QColor(255, 128, 0), 'T');
+                painter->drawLine(0, step2, 4, step2);
+            } else {
+                painter->drawLine(curve_w - 1, step2, curve_w - 9, step2);
 
-    painter->setPen(QPen(QBrush(QColor(255, 128, 0), Qt::SolidPattern), tracewidth, Qt::DashDotLine, Qt::SquareCap, Qt::BevelJoin));
-
-    painter->drawLine(1, trig_level_arrow_pos, curve_w - 2, trig_level_arrow_pos);
-  }
-  else
-  {
-    if(devparms->triggeredgesource < 4)
-    {
-      trig_level_arrow_pos = (curve_h / 2) - ((devparms->triggeredgelevel[devparms->triggeredgesource] + devparms->chanoffset[devparms->triggeredgesource]) / ((devparms->chanscale[devparms->triggeredgesource] * devparms->vertdivisions) / curve_h));
-
-      if(trig_level_arrow_pos < 0)
-      {
-        trig_level_arrow_pos = -1;
-
-        drawArrow(painter, curve_w + 6, trig_level_arrow_pos, 3, QColor(255, 128, 0), 'T');
-      }
-      else if(trig_level_arrow_pos > curve_h)
-        {
-          trig_level_arrow_pos = curve_h + 1;
-
-          drawArrow(painter, curve_w + 6, trig_level_arrow_pos, 1, QColor(255, 128, 0), 'T');
+                painter->drawLine(0, step2, 8, step2);
+            }
         }
-        else
-        {
-          drawArrow(painter, curve_w, trig_level_arrow_pos, 2, QColor(255, 128, 0), 'T');
+    } // if((devparms->math_fft == 0) || (devparms->math_fft_split == 0))
+    else {
+        painter->drawLine(curve_w / 2, curve_h - 1, curve_w / 2, 0);
+
+        painter->drawLine(0, curve_h / 2, curve_w - 1, curve_h / 2);
+    }
+
+    /////////////////////////////////// draw the arrows ///////////////////////////////////////////
+
+    if (devparms->modelserie == 6) {
+        v_sense = -((double) curve_h / 256.0);
+    } else if (devparms->modelserie == 4) {
+        v_sense = -((double) curve_h / (32.0 * devparms->vertdivisions));
+    } else {
+        v_sense = -((double) curve_h / (25.0 * devparms->vertdivisions));
+    }
+
+    drawTrigCenterArrow(painter, curve_w / 2, 0);
+
+    for (chn = 0; chn < devparms->channel_cnt; chn++) {
+        if (!devparms->chandisplay[chn]) {
+            continue;
+        }
+
+        if (chan_arrow_moving[chn]) {
+            drawArrow(painter, 0, chan_arrow_pos[chn], 0, SignalColor[chn], '1' + chn);
+        } else {
+            chan_arrow_pos[chn] = (curve_h / 2)
+                                  - (devparms->chanoffset[chn]
+                                     / ((devparms->chanscale[chn] * devparms->vertdivisions)
+                                        / curve_h));
+
+            if (chan_arrow_pos[chn] < 0) {
+                chan_arrow_pos[chn] = -1;
+
+                drawArrow(painter, -6, chan_arrow_pos[chn], 3, SignalColor[chn], '1' + chn);
+            } else if (chan_arrow_pos[chn] > curve_h) {
+                chan_arrow_pos[chn] = curve_h + 1;
+
+                drawArrow(painter, -6, chan_arrow_pos[chn], 1, SignalColor[chn], '1' + chn);
+            } else {
+                drawArrow(painter, 0, chan_arrow_pos[chn], 0, SignalColor[chn], '1' + chn);
+            }
         }
     }
 
-    if(trig_line_visible)
-    {
-      painter->setPen(QPen(QBrush(QColor(255, 128, 0), Qt::SolidPattern), tracewidth, Qt::DashDotLine, Qt::SquareCap, Qt::BevelJoin));
+    /////////////////////////////////// FFT: draw the curve ///////////////////////////////////////////
 
-      painter->drawLine(1, trig_level_arrow_pos, curve_w - 2, trig_level_arrow_pos);
-    }
-  }
-
-  if(trig_pos_arrow_moving)
-  {
-    drawArrow(painter, trig_pos_arrow_pos, 27, 1, QColor(255, 128, 0), 'T');
-  }
-  else
-  {
-    if(devparms->timebasedelayenable)
-    {
-      trig_pos_arrow_pos = (curve_w / 2) - ((devparms->timebasedelayoffset / ((double)devparms->timebasedelayscale * (double)devparms->hordivisions)) * curve_w);
-    }
-    else
-    {
-      trig_pos_arrow_pos = (curve_w / 2) - ((devparms->timebaseoffset / ((double)devparms->timebasescale * (double)devparms->hordivisions)) * curve_w);
+    if ((devparms->math_fft == 1) && (devparms->math_fft_split == 0)) {
+        drawFFT(painter, curve_h_backup, curve_w_backup);
     }
 
-    if(trig_pos_arrow_pos < 0)
-    {
-      trig_pos_arrow_pos = -1;
+    /////////////////////////////////// draw the curve ///////////////////////////////////////////
 
-      drawArrow(painter, trig_pos_arrow_pos, 18, 2, QColor(255, 128, 0), 'T');
+    if (bufsize > 32) {
+        painter->setClipping(true);
+        painter->setClipRegion(QRegion(0, 0, curve_w, curve_h), Qt::ReplaceClip);
+
+        h_step = (double) curve_w / (devparms->hordivisions * 100);
+
+        for (chn = 0, chns_done = 0; chn <= devparms->channel_cnt; chn++) {
+            if (chns_done)
+                break;
+
+            if (chn == devparms->activechannel)
+                continue;
+
+            if (chn == devparms->channel_cnt) {
+                chn = devparms->activechannel;
+
+                chns_done = 1;
+            }
+
+            if (!devparms->chandisplay[chn]) {
+                continue;
+            }
+
+            w_trace_offset = (curve_w / 2.0)
+                             - (((devparms->timebaseoffset - devparms->xorigin[chn])
+                                 / devparms->timebasescale)
+                                * ((double) curve_w / (double) (devparms->hordivisions)));
+
+            painter->setPen(QPen(QBrush(SignalColor[chn], Qt::SolidPattern),
+                                 tracewidth,
+                                 Qt::SolidLine,
+                                 Qt::SquareCap,
+                                 Qt::BevelJoin));
+
+            for (i = 0; i < bufsize; i++) {
+                if (bufsize < (curve_w / 2)) {
+                    painter->drawLine(i * h_step + w_trace_offset,
+                                      (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2)
+                                          - chan_tmp_y_pixel_offset[chn],
+                                      (i + 1) * h_step + w_trace_offset,
+                                      (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2)
+                                          - chan_tmp_y_pixel_offset[chn]);
+                    if (i) {
+                        painter->drawLine(i * h_step + w_trace_offset,
+                                          (devparms->wavebuf[chn][i - 1] * v_sense) + (curve_h / 2)
+                                              - chan_tmp_y_pixel_offset[chn],
+                                          i * h_step + w_trace_offset,
+                                          (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2)
+                                              - chan_tmp_y_pixel_offset[chn]);
+                    }
+                } else {
+                    if (i < (bufsize - 1)) {
+                        if (devparms->displaytype) {
+                            painter->drawPoint(i * h_step + w_trace_offset,
+                                               (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2)
+                                                   - chan_tmp_y_pixel_offset[chn]);
+                        } else {
+                            painter->drawLine(i * h_step + w_trace_offset,
+                                              (devparms->wavebuf[chn][i] * v_sense) + (curve_h / 2)
+                                                  - chan_tmp_y_pixel_offset[chn],
+                                              (i + 1) * h_step + w_trace_offset,
+                                              (devparms->wavebuf[chn][i + 1] * v_sense)
+                                                  + (curve_h / 2) - chan_tmp_y_pixel_offset[chn]);
+                        }
+                    }
+                }
+            }
+        }
+
+        painter->setClipping(false);
     }
-    else if(trig_pos_arrow_pos > curve_w)
-      {
-        trig_pos_arrow_pos = curve_w + 1;
 
-        drawArrow(painter, trig_pos_arrow_pos, 18, 0, QColor(255, 128, 0), 'T');
-      }
-      else
-      {
+    /////////////////////////////////// draw the decoder ///////////////////////////////////////////
+
+    if (devparms->math_decode_display)
+        draw_decoder(painter, curve_w, curve_h);
+
+    /////////////////////////////////// draw the trigger arrows ///////////////////////////////////////////
+
+    if (trig_level_arrow_moving) {
+        drawArrow(painter, curve_w, trig_level_arrow_pos, 2, QColor(255, 128, 0), 'T');
+
+        painter->setPen(QPen(QBrush(QColor(255, 128, 0), Qt::SolidPattern),
+                             tracewidth,
+                             Qt::DashDotLine,
+                             Qt::SquareCap,
+                             Qt::BevelJoin));
+
+        painter->drawLine(1, trig_level_arrow_pos, curve_w - 2, trig_level_arrow_pos);
+    } else {
+        if (devparms->triggeredgesource < 4) {
+            trig_level_arrow_pos = (curve_h / 2)
+                                   - ((devparms->triggeredgelevel[devparms->triggeredgesource]
+                                       + devparms->chanoffset[devparms->triggeredgesource])
+                                      / ((devparms->chanscale[devparms->triggeredgesource]
+                                          * devparms->vertdivisions)
+                                         / curve_h));
+
+            if (trig_level_arrow_pos < 0) {
+                trig_level_arrow_pos = -1;
+
+                drawArrow(painter, curve_w + 6, trig_level_arrow_pos, 3, QColor(255, 128, 0), 'T');
+            } else if (trig_level_arrow_pos > curve_h) {
+                trig_level_arrow_pos = curve_h + 1;
+
+                drawArrow(painter, curve_w + 6, trig_level_arrow_pos, 1, QColor(255, 128, 0), 'T');
+            } else {
+                drawArrow(painter, curve_w, trig_level_arrow_pos, 2, QColor(255, 128, 0), 'T');
+            }
+        }
+
+        if (trig_line_visible) {
+            painter->setPen(QPen(QBrush(QColor(255, 128, 0), Qt::SolidPattern),
+                                 tracewidth,
+                                 Qt::DashDotLine,
+                                 Qt::SquareCap,
+                                 Qt::BevelJoin));
+
+            painter->drawLine(1, trig_level_arrow_pos, curve_w - 2, trig_level_arrow_pos);
+        }
+    }
+
+    if (trig_pos_arrow_moving) {
         drawArrow(painter, trig_pos_arrow_pos, 27, 1, QColor(255, 128, 0), 'T');
-      }
-  }
+    } else {
+        if (devparms->timebasedelayenable) {
+            trig_pos_arrow_pos = (curve_w / 2)
+                                 - ((devparms->timebasedelayoffset
+                                     / ((double) devparms->timebasedelayscale
+                                        * (double) devparms->hordivisions))
+                                    * curve_w);
+        } else {
+            trig_pos_arrow_pos = (curve_w / 2)
+                                 - ((devparms->timebaseoffset
+                                     / ((double) devparms->timebasescale
+                                        * (double) devparms->hordivisions))
+                                    * curve_w);
+        }
 
-  if(devparms->countersrc)
-  {
-    paintCounterLabel(painter, curve_w - 180, 6);
-  }
+        if (trig_pos_arrow_pos < 0) {
+            trig_pos_arrow_pos = -1;
 
-  if(devparms->func_wrec_enable)
-  {
-    paintPlaybackLabel(painter, curve_w - 180, 40);
-  }
+            drawArrow(painter, trig_pos_arrow_pos, 18, 2, QColor(255, 128, 0), 'T');
+        } else if (trig_pos_arrow_pos > curve_w) {
+            trig_pos_arrow_pos = curve_w + 1;
 
-  if((mainwindow->adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF) || (mainwindow->navDialFunc == NAV_DIAL_FUNC_HOLDOFF))
-  {
-    paintLabel(painter, curve_w - 110, 5, 100, 20, suffixed_metric_value(devparms->triggerholdoff, 2) + "S", Qt::white);
-  }
-  else if(mainwindow->adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG)
-    {
-      paintLabel(painter, curve_w - 110, 5, 100, 20, QString::number(devparms->acquireaverages), Qt::white);
+            drawArrow(painter, trig_pos_arrow_pos, 18, 0, QColor(255, 128, 0), 'T');
+        } else {
+            drawArrow(painter, trig_pos_arrow_pos, 27, 1, QColor(255, 128, 0), 'T');
+        }
     }
 
-  if(label_active == LABEL_ACTIVE_TRIG)
-  {
-    auto str = suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource], 2);
-    str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]],2);
-
-    paintLabel(painter, curve_w - 120, curve_h - 50, 100, 20, str, QColor(255, 128, 0));
-  }
-  else if(label_active == LABEL_ACTIVE_CHAN1)
-    {
-
-      auto str = suffixed_metric_value(devparms->chanoffset[0], 2);
-      str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[0]],2);
-
-      paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[0]);
+    if (devparms->countersrc) {
+        paintCounterLabel(painter, curve_w - 180, 6);
     }
-    else if(label_active == LABEL_ACTIVE_CHAN2)
-      {
+
+    if (devparms->func_wrec_enable) {
+        paintPlaybackLabel(painter, curve_w - 180, 40);
+    }
+
+    if ((mainwindow->adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF)
+        || (mainwindow->navDialFunc == NAV_DIAL_FUNC_HOLDOFF)) {
+        paintLabel(painter,
+                   curve_w - 110,
+                   5,
+                   100,
+                   20,
+                   suffixed_metric_value(devparms->triggerholdoff, 2) + "S",
+                   Qt::white);
+    } else if (mainwindow->adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG) {
+        paintLabel(painter,
+                   curve_w - 110,
+                   5,
+                   100,
+                   20,
+                   QString::number(devparms->acquireaverages),
+                   Qt::white);
+    }
+
+    if (label_active == LABEL_ACTIVE_TRIG) {
+        auto str = suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource], 2);
+        str += QString::fromLocal8Bit(
+            devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]], 2);
+
+        paintLabel(painter, curve_w - 120, curve_h - 50, 100, 20, str, QColor(255, 128, 0));
+    } else if (label_active == LABEL_ACTIVE_CHAN1) {
+        auto str = suffixed_metric_value(devparms->chanoffset[0], 2);
+        str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[0]], 2);
+
+        paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[0]);
+    } else if (label_active == LABEL_ACTIVE_CHAN2) {
         auto str = suffixed_metric_value(devparms->chanoffset[1], 2);
-        str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[1]],2);
+        str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[1]], 2);
 
         paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[1]);
-      }
-      else if(label_active == LABEL_ACTIVE_CHAN3)
-        {
-          auto str = suffixed_metric_value(devparms->chanoffset[2], 2);
-          str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[2]],2);
+    } else if (label_active == LABEL_ACTIVE_CHAN3) {
+        auto str = suffixed_metric_value(devparms->chanoffset[2], 2);
+        str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[2]], 2);
 
-          paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[2]);
-        }
-        else if(label_active == LABEL_ACTIVE_CHAN4)
-          {
-            auto str = suffixed_metric_value(devparms->chanoffset[3], 2);
-            str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[3]],2);
+        paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[2]);
+    } else if (label_active == LABEL_ACTIVE_CHAN4) {
+        auto str = suffixed_metric_value(devparms->chanoffset[3], 2);
+        str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[3]], 2);
 
-            paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[3]);
-          }
-
-  if((devparms->math_fft == 1) && (devparms->math_fft_split == 1))
-  {
-    drawFFT(painter, curve_h_backup, curve_w_backup);
-
-    if(label_active == LABEL_ACTIVE_FFT)
-    {
-      QString label;
-      if(devparms->math_fft_unit == 0)
-      {
-        label = QString("POS: %1V").arg(suffixed_metric_value(devparms->fft_voffset, 1));
-      }
-      else
-      {
-        label = QString("POS: %1dB").arg(devparms->fft_voffset,0,'f',1);
-      }
-
-      paintLabel(painter, 20, curve_h * 1.85 - 50.0, 100, 20, label, QColor(128, 64, 255));
+        paintLabel(painter, 20, curve_h - 50, 100, 20, str, SignalColor[3]);
     }
-  }
 
-//   clk_end = clock();
-//
-//   cpu_time_used += ((double) (clk_end - clk_start)) / CLOCKS_PER_SEC;
-//
-//   scr_update_cntr++;
-//
-//   if(!(scr_update_cntr % 50))
-//   {
-//     printf("CPU time used: %f\n", cpu_time_used / 50);
-//
-//     cpu_time_used = 0;
-//   }
+    if ((devparms->math_fft == 1) && (devparms->math_fft_split == 1)) {
+        drawFFT(painter, curve_h_backup, curve_w_backup);
+
+        if (label_active == LABEL_ACTIVE_FFT) {
+            QString label;
+            if (devparms->math_fft_unit == 0) {
+                label = QString("POS: %1V").arg(suffixed_metric_value(devparms->fft_voffset, 1));
+            } else {
+                label = QString("POS: %1dB").arg(devparms->fft_voffset, 0, 'f', 1);
+            }
+
+            paintLabel(painter, 20, curve_h * 1.85 - 50.0, 100, 20, label, QColor(128, 64, 255));
+        }
+    }
+
+    //   clk_end = clock();
+    //
+    //   cpu_time_used += ((double) (clk_end - clk_start)) / CLOCKS_PER_SEC;
+    //
+    //   scr_update_cntr++;
+    //
+    //   if(!(scr_update_cntr % 50))
+    //   {
+    //     printf("CPU time used: %f\n", cpu_time_used / 50);
+    //
+    //     cpu_time_used = 0;
+    //   }
 }
-
 
 void SignalCurve::drawFFT(QPainter *painter, int curve_h_b, int curve_w_b)
 {
-  int i, small_rulers, curve_w, curve_h;
+    int i, small_rulers, curve_w, curve_h;
 
-  double h_step=0.0,
-         step,
-         step2,
-         fft_h_offset=0.0;
+    double h_step = 0.0, step, step2, fft_h_offset = 0.0;
 
-  small_rulers = 5 * devparms->hordivisions;
+    small_rulers = 5 * devparms->hordivisions;
 
-/////////////////////////////////// FFT: translate coordinates, draw and fill a rectangle ///////////////////////////////////////////
+    /////////////////////////////////// FFT: translate coordinates, draw and fill a rectangle ///////////////////////////////////////////
 
-  if(devparms->math_fft_split == 0)
-  {
-    curve_w = curve_w_b - (bordersize * 2);
+    if (devparms->math_fft_split == 0) {
+        curve_w = curve_w_b - (bordersize * 2);
 
-    curve_h = curve_h_b - (bordersize * 2);
-  }
-  else
-  {
-    curve_h = curve_h_b - (bordersize * 2);
+        curve_h = curve_h_b - (bordersize * 2);
+    } else {
+        curve_h = curve_h_b - (bordersize * 2);
 
-    curve_h /= 3;
+        curve_h /= 3;
 
-    painter->resetTransform();
+        painter->resetTransform();
 
-    painter->translate(bordersize, bordersize + curve_h + 15);
+        painter->translate(bordersize, bordersize + curve_h + 15);
 
-    curve_w = curve_w_b - (bordersize * 2);
+        curve_w = curve_w_b - (bordersize * 2);
 
-    curve_h = curve_h_b - (bordersize * 2);
+        curve_h = curve_h_b - (bordersize * 2);
 
-    curve_h *= 0.64;
+        curve_h *= 0.64;
 
-/////////////////////////////////// FFT: draw the rasters ///////////////////////////////////////////
+        /////////////////////////////////// FFT: draw the rasters ///////////////////////////////////////////
 
-    painter->setPen(RasterColor);
+        painter->setPen(RasterColor);
 
-    painter->drawRect (0, 0, curve_w - 1, curve_h - 1);
+        painter->drawRect(0, 0, curve_w - 1, curve_h - 1);
 
-    if(devparms->displaygrid)
-    {
-      painter->setPen(QPen(QBrush(RasterColor, Qt::SolidPattern), tracewidth, Qt::DotLine, Qt::SquareCap, Qt::BevelJoin));
+        if (devparms->displaygrid) {
+            painter->setPen(QPen(QBrush(RasterColor, Qt::SolidPattern),
+                                 tracewidth,
+                                 Qt::DotLine,
+                                 Qt::SquareCap,
+                                 Qt::BevelJoin));
 
-      if(devparms->displaygrid == 2)
-      {
-        step = (double)curve_w / (double)devparms->hordivisions;
+            if (devparms->displaygrid == 2) {
+                step = (double) curve_w / (double) devparms->hordivisions;
 
-        for(i=1; i<devparms->hordivisions; i++)
-        {
-          painter->drawLine(step * i, curve_h - 1, step * i, 0);
+                for (i = 1; i < devparms->hordivisions; i++) {
+                    painter->drawLine(step * i, curve_h - 1, step * i, 0);
+                }
+
+                step = curve_h / 8.0;
+
+                for (i = 1; i < 8; i++) {
+                    painter->drawLine(0, step * i, curve_w - 1, step * i);
+                }
+            } else {
+                painter->drawLine(curve_w / 2, curve_h - 1, curve_w / 2, 0);
+
+                painter->drawLine(0, curve_h / 2, curve_w - 1, curve_h / 2);
+            }
         }
 
-        step = curve_h / 8.0;
+        painter->setPen(RasterColor);
 
-        for(i=1; i<8; i++)
-        {
-          painter->drawLine(0, step * i, curve_w - 1, step * i);
+        step = (double) curve_w / (double) small_rulers;
+
+        for (i = 1; i < small_rulers; i++) {
+            step2 = step * i;
+
+            if (devparms->displaygrid) {
+                painter->drawLine(step2, curve_h / 2 + 2, step2, curve_h / 2 - 2);
+            }
+
+            if (i % 5) {
+                painter->drawLine(step2, curve_h - 1, step2, curve_h - 5);
+
+                painter->drawLine(step2, 0, step2, 4);
+            } else {
+                painter->drawLine(step2, curve_h - 1, step2, curve_h - 9);
+
+                painter->drawLine(step2, 0, step2, 8);
+            }
         }
-      }
-      else
-      {
-        painter->drawLine(curve_w / 2, curve_h - 1, curve_w / 2, 0);
 
-        painter->drawLine(0, curve_h / 2, curve_w - 1, curve_h / 2);
-      }
+        step = curve_h / 40.0;
+
+        for (i = 1; i < 40; i++) {
+            step2 = step * i;
+
+            if (devparms->displaygrid) {
+                painter->drawLine(curve_w / 2 + 2, step2, curve_w / 2 - 2, step2);
+            }
+
+            if (i % 5) {
+                painter->drawLine(curve_w - 1, step2, curve_w - 5, step2);
+
+                painter->drawLine(0, step2, 4, step2);
+            } else {
+                painter->drawLine(curve_w - 1, step2, curve_w - 9, step2);
+
+                painter->drawLine(0, step2, 8, step2);
+            }
+        }
+
+        /////////////////////////////////// FFT: draw the arrow ///////////////////////////////////////////
+
+        fft_arrow_pos = (curve_h / 2.0)
+                        - (((double) curve_h / (8.0 * devparms->fft_vscale))
+                           * devparms->fft_voffset);
+
+        drawArrow(painter, 0, fft_arrow_pos, 0, QColor(128, 64, 255), 'M');
     }
 
-    painter->setPen(RasterColor);
+    /////////////////////////////////// FFT: draw the curve ///////////////////////////////////////////
 
-    step = (double)curve_w / (double)small_rulers;
-
-    for(i=1; i<small_rulers; i++)
-    {
-      step2 = step * i;
-
-      if(devparms->displaygrid)
-      {
-        painter->drawLine(step2, curve_h / 2 + 2, step2, curve_h / 2 - 2);
-      }
-
-      if(i % 5)
-      {
-        painter->drawLine(step2, curve_h - 1, step2, curve_h - 5);
-
-        painter->drawLine(step2, 0, step2, 4);
-      }
-      else
-      {
-        painter->drawLine(step2, curve_h - 1, step2, curve_h - 9);
-
-        painter->drawLine(step2, 0, step2, 8);
-      }
+    if (bufsize < 32) {
+        return;
     }
 
-    step = curve_h / 40.0;
+    if ((devparms->fftbufsz > 32) && devparms->chandisplay[devparms->math_fft_src]) {
+        painter->setClipping(true);
+        painter->setClipRegion(QRegion(0, 0, curve_w, curve_h), Qt::ReplaceClip);
 
-    for(i=1; i<40; i++)
-    {
-      step2 = step * i;
+        h_step = (double) curve_w / (double) devparms->fftbufsz;
 
-      if(devparms->displaygrid)
-      {
-        painter->drawLine(curve_w / 2 + 2, step2, curve_w / 2  - 2, step2);
-      }
+        if (devparms->timebasedelayenable) {
+            h_step *= (100.0 / devparms->timebasedelayscale) / devparms->math_fft_hscale;
+        } else {
+            h_step *= (100.0 / devparms->timebasescale) / devparms->math_fft_hscale;
+        }
 
-      if(i % 5)
-      {
-        painter->drawLine(curve_w - 1, step2, curve_w - 5, step2);
+        if (devparms->modelserie != 1) {
+            h_step /= 28.0;
+        } else {
+            h_step /= 24.0;
+        }
 
-        painter->drawLine(0, step2, 4, step2);
-      }
-      else
-      {
-        painter->drawLine(curve_w - 1, step2, curve_w - 9, step2);
+        fft_v_sense = (double) curve_h / (-8.0 * devparms->fft_vscale);
 
-        painter->drawLine(0, step2, 8, step2);
-      }
+        fft_v_offset = (curve_h / 2.0) + (fft_v_sense * devparms->fft_voffset);
+
+        fft_h_offset = (curve_w / 2)
+                       - ((devparms->math_fft_hcenter / devparms->math_fft_hscale) * curve_w
+                          / devparms->hordivisions);
+
+        //     fft_smpls_onscreen = (double)devparms->fftbufsz * ((devparms->math_fft_hscale * devparms->hordivisions) / (double)devparms->current_screen_sf);
+
+        painter->setPen(QPen(QBrush(QColor(128, 64, 255), Qt::SolidPattern),
+                             tracewidth,
+                             Qt::SolidLine,
+                             Qt::SquareCap,
+                             Qt::BevelJoin));
+
+        for (i = 0; i < (devparms->fftbufsz - 1); i++) {
+            //       if(fft_smpls_onscreen < (curve_w / 2))
+            //       {
+            //         painter->drawLine(i * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset, (i + 1) * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset);
+            //         if(i)
+            //         {
+            //           painter->drawLine(i * h_step + fft_h_offset, (devparms->fftbuf_out[i - 1] * fft_v_sense) + fft_v_offset, i * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset);
+            //         }
+            //       }
+            //       else
+            //       {
+            //         if(i < (devparms->fftbufsz - 1))
+            //         {
+            painter->drawLine(i * h_step + fft_h_offset,
+                              (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset,
+                              (i + 1) * h_step + fft_h_offset,
+                              (devparms->fftbuf_out[i + 1] * fft_v_sense) + fft_v_offset);
+            //          }
+            //       }
+        }
+
+        QString str = QString("FFT:  CH%1  ").arg(devparms->math_fft_src + 1);
+        str += suffixed_metric_value(devparms->fft_vscale, 2);
+
+        if (devparms->math_fft_unit == 0) {
+            str += "V/Div   Center ";
+        } else {
+            str += "dBV/Div   Center ";
+        }
+
+        str += suffixed_metric_value(devparms->math_fft_hcenter, 1);
+
+        str += "Hz   ";
+
+        str += suffixed_metric_value(devparms->math_fft_hscale, 2);
+
+        str += "Hz/Div   ";
+
+        if (devparms->timebasedelayenable) {
+            str += suffixed_metric_value(100.0 / devparms->timebasedelayscale, 0);
+        } else {
+            str += suffixed_metric_value(100.0 / devparms->timebasescale, 0);
+        }
+
+        str += "Sa/s";
+
+        painter->drawText(15, 30, str);
+
+        painter->setClipping(false);
+    } else {
+        painter->setPen(QPen(QBrush(QColor(128, 64, 255), Qt::SolidPattern),
+                             tracewidth,
+                             Qt::SolidLine,
+                             Qt::SquareCap,
+                             Qt::BevelJoin));
+
+        painter->drawText(15,
+                          30,
+                          QString("FFT: CH%1 Data Invalid!").arg(devparms->math_fft_src + 1));
     }
-
-/////////////////////////////////// FFT: draw the arrow ///////////////////////////////////////////
-
-    fft_arrow_pos = (curve_h / 2.0) - (((double)curve_h / (8.0 * devparms->fft_vscale)) * devparms->fft_voffset);
-
-    drawArrow(painter, 0, fft_arrow_pos, 0, QColor(128, 64, 255), 'M');
-  }
-
-/////////////////////////////////// FFT: draw the curve ///////////////////////////////////////////
-
-  if(bufsize < 32)
-  {
-    return;
-  }
-
-  if((devparms->fftbufsz > 32) && devparms->chandisplay[devparms->math_fft_src])
-  {
-    painter->setClipping(true);
-    painter->setClipRegion(QRegion(0, 0, curve_w, curve_h), Qt::ReplaceClip);
-
-    h_step = (double)curve_w / (double)devparms->fftbufsz;
-
-    if(devparms->timebasedelayenable)
-    {
-      h_step *= (100.0 / devparms->timebasedelayscale) / devparms->math_fft_hscale;
-    }
-    else
-    {
-      h_step *= (100.0 / devparms->timebasescale) / devparms->math_fft_hscale;
-    }
-
-    if(devparms->modelserie != 1)
-    {
-      h_step /= 28.0;
-    }
-    else
-    {
-      h_step /= 24.0;
-    }
-
-    fft_v_sense = (double)curve_h / (-8.0 * devparms->fft_vscale);
-
-    fft_v_offset = (curve_h / 2.0) + (fft_v_sense * devparms->fft_voffset);
-
-    fft_h_offset = (curve_w / 2) - ((devparms->math_fft_hcenter / devparms->math_fft_hscale) * curve_w / devparms->hordivisions);
-
-//     fft_smpls_onscreen = (double)devparms->fftbufsz * ((devparms->math_fft_hscale * devparms->hordivisions) / (double)devparms->current_screen_sf);
-
-    painter->setPen(QPen(QBrush(QColor(128, 64, 255), Qt::SolidPattern), tracewidth, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin));
-
-    for(i=0; i<(devparms->fftbufsz - 1); i++)
-    {
-//       if(fft_smpls_onscreen < (curve_w / 2))
-//       {
-//         painter->drawLine(i * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset, (i + 1) * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset);
-//         if(i)
-//         {
-//           painter->drawLine(i * h_step + fft_h_offset, (devparms->fftbuf_out[i - 1] * fft_v_sense) + fft_v_offset, i * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset);
-//         }
-//       }
-//       else
-//       {
-//         if(i < (devparms->fftbufsz - 1))
-//         {
-          painter->drawLine(i * h_step + fft_h_offset, (devparms->fftbuf_out[i] * fft_v_sense) + fft_v_offset, (i + 1) * h_step + fft_h_offset, (devparms->fftbuf_out[i + 1] * fft_v_sense) + fft_v_offset);
-//          }
-//       }
-    }
-
-    QString str = QString("FFT:  CH%1  ").arg(devparms->math_fft_src + 1);
-    str += suffixed_metric_value(devparms->fft_vscale, 2);
-
-    if(devparms->math_fft_unit == 0)
-    {
-      str += "V/Div   Center ";
-    }
-    else
-    {
-      str += "dBV/Div   Center ";
-    }
-
-    str += suffixed_metric_value(devparms->math_fft_hcenter, 1);
-
-    str +=  "Hz   ";
-
-    str += suffixed_metric_value(devparms->math_fft_hscale, 2);
-
-    str += "Hz/Div   ";
-
-    if(devparms->timebasedelayenable)
-    {
-      str += suffixed_metric_value(100.0 / devparms->timebasedelayscale, 0);
-    }
-    else
-    {
-      str += suffixed_metric_value(100.0 / devparms->timebasescale, 0);
-    }
-
-    str += "Sa/s";
-
-    painter->drawText(15, 30, str);
-
-    painter->setClipping(false);
-  }
-  else
-  {
-    painter->setPen(QPen(QBrush(QColor(128, 64, 255), Qt::SolidPattern), tracewidth, Qt::SolidLine, Qt::SquareCap, Qt::BevelJoin));
-
-    painter->drawText(15, 30, QString("FFT: CH%1 Data Invalid!").arg(devparms->math_fft_src + 1));
-  }
 }
-
 
 void SignalCurve::drawCurve(struct device_settings *devp, struct tmcdev *dev)
 {
-  devparms = devp;
+    devparms = devp;
 
-  device = dev;
+    device = dev;
 
-  bufsize = devparms->wavebufsz;
+    bufsize = devparms->wavebufsz;
 
-  update();
+    update();
 }
-
 
 void SignalCurve::setDeviceParameters(struct device_settings *devp)
 {
-  devparms = devp;
+    devparms = devp;
 }
-
 
 void SignalCurve::drawTopLabels(QPainter *painter)
 {
-  int i, x1, tmp;
+    int i, x1, tmp;
 
-  double dtmp1, dtmp2;
+    double dtmp1, dtmp2;
 
-  QPainterPath path;
+    QPainterPath path;
 
-  if(devparms == NULL)
-  {
-    return;
-  }
-
-  path.addRoundedRect(5, 5, 70, 20, 3, 3);
-
-  painter->fillPath(path, Qt::black);
-
-  painter->setPen(Qt::white);
-
-  painter->drawText(5, 5, 70, 20, Qt::AlignCenter, devparms->modelname);
-
-//////////////// triggerstatus ///////////////////////////////
-
-  path = QPainterPath();
-
-  path.addRoundedRect(80, 5, 35, 20, 3, 3);
-
-  if((devparms->triggerstatus == 1) || (devparms->triggerstatus == 3))
-  {
-    if(!trig_stat_flash)
-    {
-      trig_stat_flash = 1;
-
-      trig_stat_timer->start(1000);
+    if (devparms == NULL) {
+        return;
     }
-  }
-  else
-  {
-    if(trig_stat_flash)
-    {
-      trig_stat_flash = 0;
 
-      trig_stat_timer->stop();
-    }
-  }
+    path.addRoundedRect(5, 5, 70, 20, 3, 3);
 
-  if(trig_stat_flash == 2)
-  {
-    painter->fillPath(path, Qt::green);
-
-    painter->setPen(Qt::black);
-  }
-  else
-  {
     painter->fillPath(path, Qt::black);
 
-    painter->setPen(Qt::green);
-  }
+    painter->setPen(Qt::white);
 
-  switch(devparms->triggerstatus)
-  {
-    case 0 : painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "T'D");
-             break;
-    case 1 : painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "WAIT");
-             break;
-    case 2 : painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "RUN");
-             break;
-    case 3 : painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "AUTO");
-             break;
-    case 4 : painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "FIN");
-             break;
-    case 5 : painter->setPen(Qt::red);
-             painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "STOP");
-             break;
-  }
+    painter->drawText(5, 5, 70, 20, Qt::AlignCenter, devparms->modelname);
 
-//////////////// horizontal ///////////////////////////////
+    //////////////// triggerstatus ///////////////////////////////
 
-  path = QPainterPath();
+    path = QPainterPath();
 
-  path.addRoundedRect(140, 5, 70, 20, 3, 3);
+    path.addRoundedRect(80, 5, 35, 20, 3, 3);
 
-  painter->fillPath(path, Qt::black);
+    if ((devparms->triggerstatus == 1) || (devparms->triggerstatus == 3)) {
+        if (!trig_stat_flash) {
+            trig_stat_flash = 1;
 
-  painter->setPen(Qt::white);
+            trig_stat_timer->start(1000);
+        }
+    } else {
+        if (trig_stat_flash) {
+            trig_stat_flash = 0;
 
-  painter->drawText(125, 20, "H");
+            trig_stat_timer->stop();
+        }
+    }
 
-  QString str;
-  if(devparms->timebasedelayenable)
-  {
-    str = suffixed_metric_value(devparms->timebasedelayscale, 1);
-  }
-  else
-  {
-    str = suffixed_metric_value(devparms->timebasescale, 1);
-  }
+    if (trig_stat_flash == 2) {
+        painter->fillPath(path, Qt::green);
 
-  // TODO: this function is just ineffecient, and i'm not sure if we need this with Qt anyway
-  //  if, we should provide a paramter to suffixed_metric_value to do this internally
-  // remove_trailing_zeros(str);
+        painter->setPen(Qt::black);
+    } else {
+        painter->fillPath(path, Qt::black);
 
-  str += "s";
+        painter->setPen(Qt::green);
+    }
 
-  painter->drawText(140, 5, 70, 20, Qt::AlignCenter, str);
+    switch (devparms->triggerstatus) {
+    case 0:
+        painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "T'D");
+        break;
+    case 1:
+        painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "WAIT");
+        break;
+    case 2:
+        painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "RUN");
+        break;
+    case 3:
+        painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "AUTO");
+        break;
+    case 4:
+        painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "FIN");
+        break;
+    case 5:
+        painter->setPen(Qt::red);
+        painter->drawText(80, 5, 35, 20, Qt::AlignCenter, "STOP");
+        break;
+    }
 
-//////////////// samplerate ///////////////////////////////
+    //////////////// horizontal ///////////////////////////////
 
-  painter->setPen(Qt::gray);
+    path = QPainterPath();
 
-  str = suffixed_metric_value(devparms->samplerate, 0);
+    path.addRoundedRect(140, 5, 70, 20, 3, 3);
 
-  str += "Sa/s";
+    painter->fillPath(path, Qt::black);
 
-  painter->drawText(200, -1, 85, 20, Qt::AlignCenter, str);
+    painter->setPen(Qt::white);
 
-  if(devparms->acquirememdepth)
-  {
-    str = suffixed_metric_value(devparms->acquirememdepth, 1);
+    painter->drawText(125, 20, "H");
 
+    QString str;
+    if (devparms->timebasedelayenable) {
+        str = suffixed_metric_value(devparms->timebasedelayscale, 1);
+    } else {
+        str = suffixed_metric_value(devparms->timebasescale, 1);
+    }
+
+    // TODO: this function is just ineffecient, and i'm not sure if we need this with Qt anyway
+    //  if, we should provide a paramter to suffixed_metric_value to do this internally
     // remove_trailing_zeros(str);
 
-    str += "pts";
+    str += "s";
 
-    painter->drawText(200, 14, 85, 20, Qt::AlignCenter, str);
-  }
-  else
-  {
-    painter->drawText(200, 14, 85, 20, Qt::AlignCenter, "AUTO");
-  }
+    painter->drawText(140, 5, 70, 20, Qt::AlignCenter, str);
 
-//////////////// memory position ///////////////////////////////
+    //////////////// samplerate ///////////////////////////////
 
-  path = QPainterPath();
+    painter->setPen(Qt::gray);
 
-  path.addRoundedRect(285, 5, 240, 20, 3, 3);
+    str = suffixed_metric_value(devparms->samplerate, 0);
 
-  painter->fillPath(path, Qt::black);
+    str += "Sa/s";
 
-  painter->setPen(Qt::gray);
+    painter->drawText(200, -1, 85, 20, Qt::AlignCenter, str);
 
-  if(devparms->timebasedelayenable)
-  {
-    dtmp1 = devparms->timebasedelayscale / devparms->timebasescale;
+    if (devparms->acquirememdepth) {
+        str = suffixed_metric_value(devparms->acquirememdepth, 1);
 
-    dtmp2 = (devparms->timebaseoffset - devparms->timebasedelayoffset) / ((devparms->hordivisions / 2) * devparms->timebasescale);
+        // remove_trailing_zeros(str);
 
-    tmp = (116 - (dtmp1 * 116)) - (dtmp2 * 116);
+        str += "pts";
 
-    if(tmp > 0)
-    {
-      painter->fillRect(288, 16, tmp, 8, QColor(64, 160, 255));
+        painter->drawText(200, 14, 85, 20, Qt::AlignCenter, str);
+    } else {
+        painter->drawText(200, 14, 85, 20, Qt::AlignCenter, "AUTO");
     }
 
-    x1 = (116 - (dtmp1 * 116)) + (dtmp2 * 116);
+    //////////////// memory position ///////////////////////////////
 
-    if(x1 > 0)
-    {
-      painter->fillRect(288 + 233 - x1, 16, x1, 8, QColor(64, 160, 255));
+    path = QPainterPath();
+
+    path.addRoundedRect(285, 5, 240, 20, 3, 3);
+
+    painter->fillPath(path, Qt::black);
+
+    painter->setPen(Qt::gray);
+
+    if (devparms->timebasedelayenable) {
+        dtmp1 = devparms->timebasedelayscale / devparms->timebasescale;
+
+        dtmp2 = (devparms->timebaseoffset - devparms->timebasedelayoffset)
+                / ((devparms->hordivisions / 2) * devparms->timebasescale);
+
+        tmp = (116 - (dtmp1 * 116)) - (dtmp2 * 116);
+
+        if (tmp > 0) {
+            painter->fillRect(288, 16, tmp, 8, QColor(64, 160, 255));
+        }
+
+        x1 = (116 - (dtmp1 * 116)) + (dtmp2 * 116);
+
+        if (x1 > 0) {
+            painter->fillRect(288 + 233 - x1, 16, x1, 8, QColor(64, 160, 255));
+        }
+    } else if (devparms->acquirememdepth > 1000) {
+        dtmp1 = (devparms->hordivisions * devparms->timebasescale)
+                / (devparms->acquirememdepth / devparms->samplerate);
+
+        dtmp2 = devparms->timebaseoffset / dtmp1;
+
+        tmp = (116 - (dtmp1 * 116)) - (dtmp2 * 116);
+
+        if (tmp > 0) {
+            painter->fillRect(288, 16, tmp, 8, QColor(64, 160, 255));
+        }
+
+        x1 = (116 - (dtmp1 * 116)) + (dtmp2 * 116);
+
+        if (x1 > 0) {
+            painter->fillRect(288 + 233 - x1, 16, x1, 8, QColor(64, 160, 255));
+        }
     }
-  }
-  else if(devparms->acquirememdepth > 1000)
-  {
-    dtmp1 = (devparms->hordivisions * devparms->timebasescale) / (devparms->acquirememdepth / devparms->samplerate);
 
-    dtmp2 = devparms->timebaseoffset / dtmp1;
+    painter->drawRect(288, 16, 233, 8);
 
-    tmp = (116 - (dtmp1 * 116)) - (dtmp2 * 116);
+    painter->setPen(Qt::white);
 
-    if(tmp > 0)
-    {
-      painter->fillRect(288, 16, tmp, 8, QColor(64, 160, 255));
+    painter->drawLine(289, 20, 291, 22);
+
+    for (i = 0; i < 19; i++) {
+        painter->drawLine((i * 12) + 291, 22, (i * 12) + 293, 22);
+
+        painter->drawLine((i * 12) + 297, 18, (i * 12) + 299, 18);
+
+        painter->drawLine((i * 12) + 294, 21, (i * 12) + 296, 19);
+
+        painter->drawLine((i * 12) + 300, 19, (i * 12) + 302, 21);
     }
 
-    x1 = (116 - (dtmp1 * 116)) + (dtmp2 * 116);
+    painter->drawLine(519, 22, 520, 22);
 
-    if(x1 > 0)
-    {
-      painter->fillRect(288 + 233 - x1, 16, x1, 8, QColor(64, 160, 255));
+    //////////////// delay ///////////////////////////////
+
+    path = QPainterPath();
+
+    path.addRoundedRect(570, 5, 85, 20, 3, 3);
+
+    painter->fillPath(path, Qt::black);
+
+    painter->setPen(QColor(255, 128, 0));
+
+    painter->drawText(555, 20, "D");
+
+    if (devparms->timebasedelayenable) {
+        str = suffixed_metric_value(devparms->timebasedelayoffset, 4);
+    } else {
+        str = suffixed_metric_value(devparms->timebaseoffset, 4);
     }
-  }
 
-  painter->drawRect(288, 16, 233, 8);
+    str += "s";
 
-  painter->setPen(Qt::white);
+    painter->drawText(570, 5, 85, 20, Qt::AlignCenter, str);
 
-  painter->drawLine(289, 20, 291, 22);
+    //////////////// trigger ///////////////////////////////
 
-  for(i=0; i<19; i++)
-  {
-    painter->drawLine((i * 12) + 291, 22, (i * 12) + 293, 22);
+    path = QPainterPath();
 
-    painter->drawLine((i * 12) + 297, 18, (i * 12) + 299, 18);
+    path.addRoundedRect(685, 5, 125, 20, 3, 3);
 
-    painter->drawLine((i * 12) + 294, 21, (i * 12) + 296, 19);
+    painter->fillPath(path, Qt::black);
 
-    painter->drawLine((i * 12) + 300, 19, (i * 12) + 302, 21);
-  }
+    painter->setPen(Qt::gray);
 
-  painter->drawLine(519, 22, 520, 22);
+    painter->drawText(670, 20, "T");
 
-//////////////// delay ///////////////////////////////
+    str = suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource], 2);
 
-  path = QPainterPath();
+    str += QString::fromLocal8Bit(devparms
+                                      ->chanunitstr[devparms->chanunit[devparms->triggeredgesource]],
+                                  2);
 
-  path.addRoundedRect(570, 5, 85, 20, 3, 3);
-
-  painter->fillPath(path, Qt::black);
-
-  painter->setPen(QColor(255, 128, 0));
-
-  painter->drawText(555, 20, "D");
-
-  if(devparms->timebasedelayenable)
-  {
-    str = suffixed_metric_value(devparms->timebasedelayoffset, 4);
-  }
-  else
-  {
-    str = suffixed_metric_value(devparms->timebaseoffset, 4);
-  }
-
-  str += "s";
-
-  painter->drawText(570, 5, 85, 20, Qt::AlignCenter, str);
-
-//////////////// trigger ///////////////////////////////
-
-  path = QPainterPath();
-
-  path.addRoundedRect(685, 5, 125, 20, 3, 3);
-
-  painter->fillPath(path, Qt::black);
-
-  painter->setPen(Qt::gray);
-
-  painter->drawText(670, 20, "T");
-
-  str = suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource], 2);
-
-  str += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]],2);
-
-  if(devparms->triggeredgesource < 4)
-  {
-    painter->setPen(SignalColor[devparms->triggeredgesource]);
-  }
-  else
-  {
-    switch(devparms->triggeredgesource)
-    {
-      case 4:
-      case 5: painter->setPen(Qt::green);
-              break;
-      case 6: painter->setPen(QColor(255, 64, 0));
-              break;
+    if (devparms->triggeredgesource < 4) {
+        painter->setPen(SignalColor[devparms->triggeredgesource]);
+    } else {
+        switch (devparms->triggeredgesource) {
+        case 4:
+        case 5:
+            painter->setPen(Qt::green);
+            break;
+        case 6:
+            painter->setPen(QColor(255, 64, 0));
+            break;
+        }
     }
-  }
 
-  if(devparms->triggeredgesource != 6)
-  {
-    painter->drawText(735, 5, 85, 20, Qt::AlignCenter, str);
-  }
-
-  path = QPainterPath();
-
-  path.addRoundedRect(725, 7, 15, 15, 3, 3);
-
-  if(devparms->triggeredgesource < 4)
-  {
-    painter->fillPath(path, SignalColor[devparms->triggeredgesource]);
-
-    str = QString::number(devparms->triggeredgesource + 1);
-  }
-  else
-  {
-    switch(devparms->triggeredgesource)
-    {
-      case 4:
-      case 5: painter->fillPath(path, Qt::green);
-              str = "E";
-              break;
-      case 6: painter->fillPath(path, QColor(255, 64, 0));
-              str = "AC";
-              break;
+    if (devparms->triggeredgesource != 6) {
+        painter->drawText(735, 5, 85, 20, Qt::AlignCenter, str);
     }
-  }
 
-  if(devparms->triggeredgeslope == 0)
-  {
-    painter->drawLine(705, 8, 710, 8);
-    painter->drawLine(705, 8, 705, 20);
-    painter->drawLine(700, 20, 705, 20);
-    painter->drawLine(701, 15, 705, 11);
-    painter->drawLine(709, 15, 705, 11);
-  }
+    path = QPainterPath();
 
-  if(devparms->triggeredgeslope == 1)
-  {
-    painter->drawLine(700, 8, 705, 8);
-    painter->drawLine(705, 8, 705, 20);
-    painter->drawLine(705, 20, 710, 20);
-    painter->drawLine(701, 12, 705, 16);
-    painter->drawLine(709, 12, 705, 16);
-  }
+    path.addRoundedRect(725, 7, 15, 15, 3, 3);
 
-  if(devparms->triggeredgeslope == 2)
-  {
-    painter->drawLine(702, 8, 702, 18);
-    painter->drawLine(700, 10, 702, 8);
-    painter->drawLine(704, 10, 702, 8);
-    painter->drawLine(708, 8, 708, 18);
-    painter->drawLine(706, 16, 708, 18);
-    painter->drawLine(710, 16, 708, 18);
-  }
+    if (devparms->triggeredgesource < 4) {
+        painter->fillPath(path, SignalColor[devparms->triggeredgesource]);
 
-  painter->setPen(Qt::black);
+        str = QString::number(devparms->triggeredgesource + 1);
+    } else {
+        switch (devparms->triggeredgesource) {
+        case 4:
+        case 5:
+            painter->fillPath(path, Qt::green);
+            str = "E";
+            break;
+        case 6:
+            painter->fillPath(path, QColor(255, 64, 0));
+            str = "AC";
+            break;
+        }
+    }
 
-  painter->drawText(725, 8, 15, 15, Qt::AlignCenter, str);
+    if (devparms->triggeredgeslope == 0) {
+        painter->drawLine(705, 8, 710, 8);
+        painter->drawLine(705, 8, 705, 20);
+        painter->drawLine(700, 20, 705, 20);
+        painter->drawLine(701, 15, 705, 11);
+        painter->drawLine(709, 15, 705, 11);
+    }
+
+    if (devparms->triggeredgeslope == 1) {
+        painter->drawLine(700, 8, 705, 8);
+        painter->drawLine(705, 8, 705, 20);
+        painter->drawLine(705, 20, 710, 20);
+        painter->drawLine(701, 12, 705, 16);
+        painter->drawLine(709, 12, 705, 16);
+    }
+
+    if (devparms->triggeredgeslope == 2) {
+        painter->drawLine(702, 8, 702, 18);
+        painter->drawLine(700, 10, 702, 8);
+        painter->drawLine(704, 10, 702, 8);
+        painter->drawLine(708, 8, 708, 18);
+        painter->drawLine(706, 16, 708, 18);
+        painter->drawLine(710, 16, 708, 18);
+    }
+
+    painter->setPen(Qt::black);
+
+    painter->drawText(725, 8, 15, 15, Qt::AlignCenter, str);
 }
-
 
 void SignalCurve::drawfpsLabel(QPainter *painter, int xpos, int ypos)
 {
-  QString str{"%i fps"};
+    QString str{"%i fps"};
 
-  static struct timespec tp1, tp2;
+    static struct timespec tp1, tp2;
 
-  painter->setPen(Qt::red);
+    painter->setPen(Qt::red);
 
-  clock_gettime(CLOCK_REALTIME, &tp1);
+    clock_gettime(CLOCK_REALTIME, &tp1);
 
-  if(tp1.tv_nsec >= tp2.tv_nsec)
-  {
-    str = str.arg(1.0 / ((tp1.tv_sec - tp2.tv_sec) + ((tp1.tv_nsec - tp2.tv_nsec) / 1e9)),0,'f',1);
-  }
-  else
-  {
-    str = str.arg(1.0 / 1.0 / ((tp1.tv_sec - tp2.tv_sec - 1) + ((tp1.tv_nsec - tp2.tv_nsec + 1000000000) / 1e9)),0,'f',1);
-  }
+    if (tp1.tv_nsec >= tp2.tv_nsec) {
+        str = str.arg(1.0 / ((tp1.tv_sec - tp2.tv_sec) + ((tp1.tv_nsec - tp2.tv_nsec) / 1e9)),
+                      0,
+                      'f',
+                      1);
+    } else {
+        str = str.arg(1.0 / 1.0
+                          / ((tp1.tv_sec - tp2.tv_sec - 1)
+                             + ((tp1.tv_nsec - tp2.tv_nsec + 1000000000) / 1e9)),
+                      0,
+                      'f',
+                      1);
+    }
 
-  painter->drawText(xpos, ypos, str);
+    painter->drawText(xpos, ypos, str);
 
-  tp2 = tp1;
+    tp2 = tp1;
 }
-
 
 void SignalCurve::drawChanLabel(QPainter *painter, int xpos, int ypos, int chn)
 {
-  QPainterPath path;
+    QPainterPath path;
 
-  QString str1, str2;
+    QString str1, str2;
 
-  if(devparms == NULL)
-  {
-    return;
-  }
+    if (devparms == NULL) {
+        return;
+    }
 
-  str1 = QString::number(chn + 1);
+    str1 = QString::number(chn + 1);
 
-  str2 = suffixed_metric_value(devparms->chanscale[chn], 2);
+    str2 = suffixed_metric_value(devparms->chanscale[chn], 2);
 
-  str2 += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[chn]],2);
+    str2 += QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[chn]], 2);
 
+    if (devparms->chanbwlimit[chn]) {
+        str2 += " B";
+    }
 
-  if(devparms->chanbwlimit[chn])
-  {
-    str2 += " B";
-  }
+    if (devparms->chandisplay[chn]) {
+        if (chn == devparms->activechannel) {
+            path.addRoundedRect(xpos, ypos, 20, 20, 3, 3);
 
-  if(devparms->chandisplay[chn])
-  {
-    if(chn == devparms->activechannel)
-    {
-      path.addRoundedRect(xpos, ypos, 20, 20, 3, 3);
+            painter->fillPath(path, SignalColor[chn]);
 
-      painter->fillPath(path, SignalColor[chn]);
+            painter->setPen(Qt::black);
 
-      painter->setPen(Qt::black);
+            painter->drawText(xpos + 6, ypos + 15, str1);
 
-      painter->drawText(xpos + 6, ypos + 15, str1);
+            if (devparms->chaninvert[chn]) {
+                painter->drawLine(xpos + 6, ypos + 3, xpos + 14, ypos + 3);
+            }
 
-      if(devparms->chaninvert[chn])
-      {
-        painter->drawLine(xpos + 6, ypos + 3, xpos + 14, ypos + 3);
-      }
+            path = QPainterPath();
 
-      path = QPainterPath();
+            path.addRoundedRect(xpos + 25, ypos, 90, 20, 3, 3);
 
-      path.addRoundedRect(xpos + 25, ypos, 90, 20, 3, 3);
+            painter->fillPath(path, Qt::black);
 
-      painter->fillPath(path, Qt::black);
+            painter->setPen(SignalColor[chn]);
 
-      painter->setPen(SignalColor[chn]);
+            painter->drawRoundedRect(xpos + 25, ypos, 90, 20, 3, 3);
 
-      painter->drawRoundedRect(xpos + 25, ypos, 90, 20, 3, 3);
+            painter->drawText(xpos + 35, ypos + 1, 90, 20, Qt::AlignCenter, str2);
 
-      painter->drawText(xpos + 35, ypos + 1, 90, 20, Qt::AlignCenter, str2);
+            if (devparms->chancoupling[chn] == 0) {
+                painter->drawLine(xpos + 33, ypos + 6, xpos + 33, ypos + 10);
 
-      if(devparms->chancoupling[chn] == 0)
-      {
-        painter->drawLine(xpos + 33, ypos + 6, xpos + 33, ypos + 10);
+                painter->drawLine(xpos + 28, ypos + 10, xpos + 38, ypos + 10);
 
-        painter->drawLine(xpos + 28, ypos + 10, xpos + 38, ypos + 10);
+                painter->drawLine(xpos + 30, ypos + 12, xpos + 36, ypos + 12);
 
-        painter->drawLine(xpos + 30, ypos + 12, xpos + 36, ypos + 12);
+                painter->drawLine(xpos + 32, ypos + 14, xpos + 34, ypos + 14);
+            } else if (devparms->chancoupling[chn] == 1) {
+                painter->drawLine(xpos + 28, ypos + 8, xpos + 38, ypos + 8);
 
-        painter->drawLine(xpos + 32, ypos + 14, xpos + 34, ypos + 14);
-      }
-      else if(devparms->chancoupling[chn] == 1)
-        {
-          painter->drawLine(xpos + 28, ypos + 8, xpos + 38, ypos + 8);
+                painter->drawLine(xpos + 28, ypos + 12, xpos + 30, ypos + 12);
 
-          painter->drawLine(xpos + 28, ypos + 12, xpos + 30, ypos + 12);
+                painter->drawLine(xpos + 32, ypos + 12, xpos + 34, ypos + 12);
 
-          painter->drawLine(xpos + 32, ypos + 12, xpos + 34, ypos + 12);
+                painter->drawLine(xpos + 36, ypos + 12, xpos + 38, ypos + 12);
+            } else if (devparms->chancoupling[chn] == 2) {
+                painter->drawArc(xpos + 30, ypos + 8, 5, 5, 10 * 16, 160 * 16);
 
-          painter->drawLine(xpos + 36, ypos + 12, xpos + 38, ypos + 12);
+                painter->drawArc(xpos + 35, ypos + 8, 5, 5, -10 * 16, -160 * 16);
+            }
+        } else {
+            path.addRoundedRect(xpos, ypos, 20, 20, 3, 3);
+
+            path.addRoundedRect(xpos + 25, ypos, 85, 20, 3, 3);
+
+            painter->fillPath(path, Qt::black);
+
+            painter->setPen(SignalColor[chn]);
+
+            painter->drawText(xpos + 6, ypos + 15, str1);
+
+            if (devparms->chaninvert[chn]) {
+                painter->drawLine(xpos + 6, ypos + 3, xpos + 14, ypos + 3);
+            }
+
+            painter->drawText(xpos + 35, ypos + 1, 90, 20, Qt::AlignCenter, str2);
+
+            if (devparms->chancoupling[chn] == 0) {
+                painter->drawLine(xpos + 33, ypos + 6, xpos + 33, ypos + 10);
+
+                painter->drawLine(xpos + 28, ypos + 10, xpos + 38, ypos + 10);
+
+                painter->drawLine(xpos + 30, ypos + 12, xpos + 36, ypos + 12);
+
+                painter->drawLine(xpos + 32, ypos + 14, xpos + 34, ypos + 14);
+            } else if (devparms->chancoupling[chn] == 1) {
+                painter->drawLine(xpos + 28, ypos + 8, xpos + 38, ypos + 8);
+
+                painter->drawLine(xpos + 28, ypos + 12, xpos + 30, ypos + 12);
+
+                painter->drawLine(xpos + 32, ypos + 12, xpos + 34, ypos + 12);
+
+                painter->drawLine(xpos + 36, ypos + 12, xpos + 38, ypos + 12);
+            } else if (devparms->chancoupling[chn] == 2) {
+                painter->drawArc(xpos + 30, ypos + 8, 5, 5, 10 * 16, 160 * 16);
+
+                painter->drawArc(xpos + 35, ypos + 8, 5, 5, -10 * 16, -160 * 16);
+            }
         }
-        else if(devparms->chancoupling[chn] == 2)
-          {
+    } else {
+        path.addRoundedRect(xpos, ypos, 20, 20, 3, 3);
+
+        path.addRoundedRect(xpos + 25, ypos, 85, 20, 3, 3);
+
+        painter->fillPath(path, Qt::black);
+
+        painter->setPen(QColor(48, 48, 48));
+
+        painter->drawText(xpos + 6, ypos + 15, str1);
+
+        painter->drawText(xpos + 30, ypos + 1, 85, 20, Qt::AlignCenter, str2);
+
+        if (devparms->chanbwlimit[chn]) {
+            painter->drawText(xpos + 90, ypos + 1, 20, 20, Qt::AlignCenter, "B");
+        }
+
+        if (devparms->chancoupling[chn] == 0) {
+            painter->drawLine(xpos + 33, ypos + 6, xpos + 33, ypos + 10);
+
+            painter->drawLine(xpos + 28, ypos + 10, xpos + 38, ypos + 10);
+
+            painter->drawLine(xpos + 30, ypos + 12, xpos + 36, ypos + 12);
+
+            painter->drawLine(xpos + 32, ypos + 14, xpos + 34, ypos + 14);
+        } else if (devparms->chancoupling[chn] == 1) {
+            painter->drawLine(xpos + 28, ypos + 8, xpos + 38, ypos + 8);
+
+            painter->drawLine(xpos + 28, ypos + 12, xpos + 30, ypos + 12);
+
+            painter->drawLine(xpos + 32, ypos + 12, xpos + 34, ypos + 12);
+
+            painter->drawLine(xpos + 36, ypos + 12, xpos + 38, ypos + 12);
+        } else if (devparms->chancoupling[chn] == 2) {
             painter->drawArc(xpos + 30, ypos + 8, 5, 5, 10 * 16, 160 * 16);
 
             painter->drawArc(xpos + 35, ypos + 8, 5, 5, -10 * 16, -160 * 16);
-          }
-    }
-    else
-    {
-      path.addRoundedRect(xpos, ypos, 20, 20, 3, 3);
-
-      path.addRoundedRect(xpos + 25, ypos, 85, 20, 3, 3);
-
-      painter->fillPath(path, Qt::black);
-
-      painter->setPen(SignalColor[chn]);
-
-      painter->drawText(xpos + 6, ypos + 15, str1);
-
-      if(devparms->chaninvert[chn])
-      {
-        painter->drawLine(xpos + 6, ypos + 3, xpos + 14, ypos + 3);
-      }
-
-      painter->drawText(xpos + 35, ypos + 1, 90, 20, Qt::AlignCenter, str2);
-
-      if(devparms->chancoupling[chn] == 0)
-      {
-        painter->drawLine(xpos + 33, ypos + 6, xpos + 33, ypos + 10);
-
-        painter->drawLine(xpos + 28, ypos + 10, xpos + 38, ypos + 10);
-
-        painter->drawLine(xpos + 30, ypos + 12, xpos + 36, ypos + 12);
-
-        painter->drawLine(xpos + 32, ypos + 14, xpos + 34, ypos + 14);
-      }
-      else if(devparms->chancoupling[chn] == 1)
-        {
-          painter->drawLine(xpos + 28, ypos + 8, xpos + 38, ypos + 8);
-
-          painter->drawLine(xpos + 28, ypos + 12, xpos + 30, ypos + 12);
-
-          painter->drawLine(xpos + 32, ypos + 12, xpos + 34, ypos + 12);
-
-          painter->drawLine(xpos + 36, ypos + 12, xpos + 38, ypos + 12);
         }
-        else if(devparms->chancoupling[chn] == 2)
-          {
-            painter->drawArc(xpos + 30, ypos + 8, 5, 5, 10 * 16, 160 * 16);
-
-            painter->drawArc(xpos + 35, ypos + 8, 5, 5, -10 * 16, -160 * 16);
-          }
     }
-  }
-  else
-  {
-    path.addRoundedRect(xpos, ypos, 20, 20, 3, 3);
-
-    path.addRoundedRect(xpos + 25, ypos, 85, 20, 3, 3);
-
-    painter->fillPath(path, Qt::black);
-
-    painter->setPen(QColor(48, 48, 48));
-
-    painter->drawText(xpos + 6, ypos + 15, str1);
-
-    painter->drawText(xpos + 30, ypos + 1, 85, 20, Qt::AlignCenter, str2);
-
-    if(devparms->chanbwlimit[chn])
-    {
-      painter->drawText(xpos + 90, ypos + 1, 20, 20, Qt::AlignCenter, "B");
-    }
-
-    if(devparms->chancoupling[chn] == 0)
-    {
-      painter->drawLine(xpos + 33, ypos + 6, xpos + 33, ypos + 10);
-
-      painter->drawLine(xpos + 28, ypos + 10, xpos + 38, ypos + 10);
-
-      painter->drawLine(xpos + 30, ypos + 12, xpos + 36, ypos + 12);
-
-      painter->drawLine(xpos + 32, ypos + 14, xpos + 34, ypos + 14);
-    }
-    else if(devparms->chancoupling[chn] == 1)
-      {
-        painter->drawLine(xpos + 28, ypos + 8, xpos + 38, ypos + 8);
-
-        painter->drawLine(xpos + 28, ypos + 12, xpos + 30, ypos + 12);
-
-        painter->drawLine(xpos + 32, ypos + 12, xpos + 34, ypos + 12);
-
-        painter->drawLine(xpos + 36, ypos + 12, xpos + 38, ypos + 12);
-      }
-      else if(devparms->chancoupling[chn] == 2)
-        {
-          painter->drawArc(xpos + 30, ypos + 8, 5, 5, 10 * 16, 160 * 16);
-
-          painter->drawArc(xpos + 35, ypos + 8, 5, 5, -10 * 16, -160 * 16);
-        }
-  }
 }
-
 
 void SignalCurve::drawArrow(QPainter *painter, int xpos, int ypos, int rot, QColor color, char ch)
 {
-  QPainterPath path;
+    QPainterPath path;
 
-  QString str = QString::number(ch);
+    QString str = QString::number(ch);
 
-  if(rot == 0)
-  {
-    path.moveTo(xpos - 20, ypos + 6);
-    path.lineTo(xpos - 7,  ypos + 6);
-    path.lineTo(xpos,     ypos);
-    path.lineTo(xpos - 7,  ypos - 6);
-    path.lineTo(xpos - 20, ypos - 6);
-    path.lineTo(xpos - 20, ypos + 6);
-    painter->fillPath(path, color);
+    if (rot == 0) {
+        path.moveTo(xpos - 20, ypos + 6);
+        path.lineTo(xpos - 7, ypos + 6);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos - 7, ypos - 6);
+        path.lineTo(xpos - 20, ypos - 6);
+        path.lineTo(xpos - 20, ypos + 6);
+        painter->fillPath(path, color);
 
-    painter->setPen(Qt::black);
+        painter->setPen(Qt::black);
 
-    painter->drawText(xpos - 17, ypos + 4, str);
-  }
-  else if(rot == 1)
-    {
-      path.moveTo(xpos + 6, ypos - 20);
-      path.lineTo(xpos + 6,  ypos - 7);
-      path.lineTo(xpos,     ypos);
-      path.lineTo(xpos - 6,  ypos - 7);
-      path.lineTo(xpos - 6, ypos - 20);
-      path.lineTo(xpos + 6, ypos - 20);
-      painter->fillPath(path, color);
+        painter->drawText(xpos - 17, ypos + 4, str);
+    } else if (rot == 1) {
+        path.moveTo(xpos + 6, ypos - 20);
+        path.lineTo(xpos + 6, ypos - 7);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos - 6, ypos - 7);
+        path.lineTo(xpos - 6, ypos - 20);
+        path.lineTo(xpos + 6, ypos - 20);
+        painter->fillPath(path, color);
 
-      painter->setPen(Qt::black);
+        painter->setPen(Qt::black);
 
-      painter->drawText(xpos - 3, ypos - 7, str);
-    }
-    else if(rot == 2)
-      {
+        painter->drawText(xpos - 3, ypos - 7, str);
+    } else if (rot == 2) {
         path.moveTo(xpos + 20, ypos + 6);
-        path.lineTo(xpos + 7,  ypos + 6);
-        path.lineTo(xpos,     ypos);
-        path.lineTo(xpos + 7,  ypos - 6);
+        path.lineTo(xpos + 7, ypos + 6);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos + 7, ypos - 6);
         path.lineTo(xpos + 20, ypos - 6);
         path.lineTo(xpos + 20, ypos + 6);
         painter->fillPath(path, color);
@@ -1459,68 +1332,60 @@ void SignalCurve::drawArrow(QPainter *painter, int xpos, int ypos, int rot, QCol
         painter->setPen(Qt::black);
 
         painter->drawText(xpos + 9, ypos + 4, str);
-      }
-      else if(rot == 3)
-        {
-          path.moveTo(xpos + 6, ypos + 20);
-          path.lineTo(xpos + 6,  ypos + 7);
-          path.lineTo(xpos,     ypos);
-          path.lineTo(xpos - 6,  ypos + 7);
-          path.lineTo(xpos - 6, ypos + 20);
-          path.lineTo(xpos + 6, ypos + 20);
-          painter->fillPath(path, color);
+    } else if (rot == 3) {
+        path.moveTo(xpos + 6, ypos + 20);
+        path.lineTo(xpos + 6, ypos + 7);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos - 6, ypos + 7);
+        path.lineTo(xpos - 6, ypos + 20);
+        path.lineTo(xpos + 6, ypos + 20);
+        painter->fillPath(path, color);
 
-          painter->setPen(Qt::black);
+        painter->setPen(Qt::black);
 
-          painter->drawText(xpos - 3, ypos + 16, str);
-        }
+        painter->drawText(xpos - 3, ypos + 16, str);
+    }
 }
-
 
 void SignalCurve::drawSmallTriggerArrow(QPainter *painter, int xpos, int ypos, int rot, QColor color)
 {
-  QPainterPath path;
+    QPainterPath path;
 
-  if(rot == 0)
-  {
-    path.moveTo(xpos - 13, ypos - 5);
-    path.lineTo(xpos - 5,  ypos - 5);
-    path.lineTo(xpos,     ypos);
-    path.lineTo(xpos - 5,  ypos + 5);
-    path.lineTo(xpos - 13, ypos + 5);
-    path.lineTo(xpos - 13, ypos - 5);
+    if (rot == 0) {
+        path.moveTo(xpos - 13, ypos - 5);
+        path.lineTo(xpos - 5, ypos - 5);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos - 5, ypos + 5);
+        path.lineTo(xpos - 13, ypos + 5);
+        path.lineTo(xpos - 13, ypos - 5);
 
-    painter->fillPath(path, color);
+        painter->fillPath(path, color);
 
-    painter->setPen(Qt::black);
+        painter->setPen(Qt::black);
 
-    painter->drawLine(xpos - 10, ypos - 4, xpos - 6, ypos - 4);
+        painter->drawLine(xpos - 10, ypos - 4, xpos - 6, ypos - 4);
 
-    painter->drawLine(xpos - 8, ypos - 4, xpos - 8, ypos + 4);
-  }
-  else if(rot == 1)
-    {
-      path.moveTo(xpos + 5, ypos - 10);
-      path.lineTo(xpos + 5,  ypos - 5);
-      path.lineTo(xpos,     ypos);
-      path.lineTo(xpos - 4,  ypos - 5);
-      path.lineTo(xpos - 4, ypos - 10);
-      path.lineTo(xpos + 5, ypos - 10);
+        painter->drawLine(xpos - 8, ypos - 4, xpos - 8, ypos + 4);
+    } else if (rot == 1) {
+        path.moveTo(xpos + 5, ypos - 10);
+        path.lineTo(xpos + 5, ypos - 5);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos - 4, ypos - 5);
+        path.lineTo(xpos - 4, ypos - 10);
+        path.lineTo(xpos + 5, ypos - 10);
 
-      painter->fillPath(path, color);
+        painter->fillPath(path, color);
 
-      painter->setPen(Qt::black);
+        painter->setPen(Qt::black);
 
-      painter->drawLine(xpos - 2, ypos - 8, xpos + 2, ypos - 8);
+        painter->drawLine(xpos - 2, ypos - 8, xpos + 2, ypos - 8);
 
-      painter->drawLine(xpos, ypos - 8, xpos, ypos - 3);
-    }
-    else if(rot == 2)
-      {
+        painter->drawLine(xpos, ypos - 8, xpos, ypos - 3);
+    } else if (rot == 2) {
         path.moveTo(xpos + 12, ypos - 5);
-        path.lineTo(xpos + 5,  ypos - 5);
-        path.lineTo(xpos,     ypos);
-        path.lineTo(xpos + 5,  ypos + 5);
+        path.lineTo(xpos + 5, ypos - 5);
+        path.lineTo(xpos, ypos);
+        path.lineTo(xpos + 5, ypos + 5);
         path.lineTo(xpos + 12, ypos + 5);
         path.lineTo(xpos + 12, ypos - 5);
 
@@ -1531,1299 +1396,1347 @@ void SignalCurve::drawSmallTriggerArrow(QPainter *painter, int xpos, int ypos, i
         painter->drawLine(xpos + 9, ypos - 4, xpos + 5, ypos - 4);
 
         painter->drawLine(xpos + 7, ypos - 4, xpos + 7, ypos + 4);
-      }
+    }
 }
-
 
 void SignalCurve::drawTrigCenterArrow(QPainter *painter, int xpos, int ypos)
 {
-  QPainterPath path;
+    QPainterPath path;
 
-  path.moveTo(xpos + 7, ypos);
-  path.lineTo(xpos - 6, ypos);
-  path.lineTo(xpos, ypos + 7);
-  path.lineTo(xpos + 7, ypos);
-  painter->fillPath(path, QColor(255, 128, 0));
+    path.moveTo(xpos + 7, ypos);
+    path.lineTo(xpos - 6, ypos);
+    path.lineTo(xpos, ypos + 7);
+    path.lineTo(xpos + 7, ypos);
+    painter->fillPath(path, QColor(255, 128, 0));
 }
-
 
 void SignalCurve::setSignalColor1(QColor newColor)
 {
-  SignalColor[0] = newColor;
-  update();
+    SignalColor[0] = newColor;
+    update();
 }
-
 
 void SignalCurve::setSignalColor2(QColor newColor)
 {
-  SignalColor[1] = newColor;
-  update();
+    SignalColor[1] = newColor;
+    update();
 }
-
 
 void SignalCurve::setSignalColor3(QColor newColor)
 {
-  SignalColor[2] = newColor;
-  update();
+    SignalColor[2] = newColor;
+    update();
 }
-
 
 void SignalCurve::setSignalColor4(QColor newColor)
 {
-  SignalColor[3] = newColor;
-  update();
+    SignalColor[3] = newColor;
+    update();
 }
-
 
 void SignalCurve::setTraceWidth(int tr_width)
 {
-  tracewidth = tr_width;
-  if(tracewidth < 0)  tracewidth = 0;
-  update();
+    tracewidth = tr_width;
+    if (tracewidth < 0)
+        tracewidth = 0;
+    update();
 }
-
 
 void SignalCurve::setBackgroundColor(QColor newColor)
 {
-  BackgroundColor = newColor;
-  update();
+    BackgroundColor = newColor;
+    update();
 }
-
 
 void SignalCurve::setRasterColor(QColor newColor)
 {
-  RasterColor = newColor;
-  update();
+    RasterColor = newColor;
+    update();
 }
-
 
 void SignalCurve::setBorderSize(int newsize)
 {
-  bordersize = newsize;
-  if(bordersize < 0)  bordersize = 0;
-  update();
+    bordersize = newsize;
+    if (bordersize < 0)
+        bordersize = 0;
+    update();
 }
-
 
 void SignalCurve::mousePressEvent(QMouseEvent *press_event)
 {
-  int chn,
-      m_x,
-      m_y;
+    int chn, m_x, m_y;
 
-  setFocus(Qt::MouseFocusReason);
+    setFocus(Qt::MouseFocusReason);
 
-  w = width() - (2 * bordersize);
-  h = height() - (2 * bordersize);
+    w = width() - (2 * bordersize);
+    h = height() - (2 * bordersize);
 
-  m_x = press_event->x() - bordersize;
-  m_y = press_event->y() - bordersize;
+    m_x = press_event->x() - bordersize;
+    m_y = press_event->y() - bordersize;
 
-  if(devparms == NULL)
-  {
-    return;
-  }
-
-  if(!devparms->connected)
-  {
-    return;
-  }
-
-  if(devparms->math_fft && devparms->math_fft_split)
-  {
-    m_y -= ((h / 3) + 15);
-
-    if((m_x > -26) && (m_x < 0) && (m_y > (fft_arrow_pos - 7)) && (m_y < (fft_arrow_pos + 7)))
-    {
-      fft_arrow_moving = 1;
-      use_move_events = 1;
-      setMouseTracking(true);
-      mouse_old_x = m_x;
-      mouse_old_y = m_y;
-      mainwindow->scrn_timer->stop();
+    if (devparms == NULL) {
+        return;
     }
 
-    return;
-  }
-
-//  printf("m_x: %i   m_y: %i   trig_pos_arrow_pos: %i\n",m_x, m_y, trig_pos_arrow_pos);
-
-  if(press_event->button() == Qt::LeftButton)
-  {
-    if(m_y > (h + 12))
-    {
-//      printf("m_x is: %i   m_y is: %i\n", m_x, m_y);
-
-      m_x += bordersize;
-
-      if((m_x > 8) && (m_x < 118))
-      {
-        emit chan1Clicked();
-      }
-      else if((m_x > 133) && (m_x < 243))
-        {
-          emit chan2Clicked();
-        }
-        else if((m_x > 258) && (m_x < 368))
-          {
-            if(devparms->channel_cnt > 2)
-            {
-              emit chan3Clicked();
-            }
-          }
-          else if((m_x > 383) && (m_x < 493))
-            {
-              if(devparms->channel_cnt > 3)
-              {
-                emit chan4Clicked();
-              }
-            }
-
-      return;
+    if (!devparms->connected) {
+        return;
     }
 
-    if(((m_x > (trig_pos_arrow_pos - 8)) && (m_x < (trig_pos_arrow_pos + 8)) && (m_y > 5) && (m_y < 24)) ||
-       ((trig_pos_arrow_pos > w) && (m_x > (trig_pos_arrow_pos - 24)) && (m_x <= trig_pos_arrow_pos) && (m_y > 9) && (m_y < 26)) ||
-       ((trig_pos_arrow_pos < 0) && (m_x < 24) && (m_x >= 0) && (m_y > 9) && (m_y < 26)))
-    {
-      trig_pos_arrow_moving = 1;
-      use_move_events = 1;
-      setMouseTracking(true);
-      mouse_old_x = m_x;
-      mouse_old_y = m_y;
-    }
-    else if(((m_x > w) && (m_x < (w + 26)) && (m_y > (trig_level_arrow_pos - 7)) && (m_y < (trig_level_arrow_pos + 7))) ||
-            ((trig_level_arrow_pos < 0) && (m_x >= w) && (m_x < (w + 18)) && (m_y >= 0) && (m_y < 22)) ||
-            ((trig_level_arrow_pos > h) && (m_x >= w) && (m_x < (w + 18)) && (m_y <= h) && (m_y > (h - 22))))
-      {
-        trig_level_arrow_moving = 1;
-        use_move_events = 1;
-        trig_line_visible = 1;
-        setMouseTracking(true);
-        mouse_old_x = m_x;
-        mouse_old_y = m_y;
-      }
-      else
-      {
-        for(chn=0; chn<devparms->channel_cnt; chn++)
-        {
-          if(!devparms->chandisplay[chn])
-          {
-            continue;
-          }
+    if (devparms->math_fft && devparms->math_fft_split) {
+        m_y -= ((h / 3) + 15);
 
-          if((m_x > -26 && (m_x < 0) && (m_y > (chan_arrow_pos[chn] - 7)) && (m_y < (chan_arrow_pos[chn] + 7))) ||
-             ((chan_arrow_pos[chn] < 0) && (m_x > -18) && (m_x <= 0) && (m_y >= 0) && (m_y < 22)) ||
-             ((chan_arrow_pos[chn] > h) && (m_x > -18) && (m_x <= 0) && (m_y <= h) && (m_y > (h - 22))))
-          {
-            chan_arrow_moving[chn] = 1;
-            devparms->activechannel = chn;
+        if ((m_x > -26) && (m_x < 0) && (m_y > (fft_arrow_pos - 7)) && (m_y < (fft_arrow_pos + 7))) {
+            fft_arrow_moving = 1;
             use_move_events = 1;
             setMouseTracking(true);
             mouse_old_x = m_x;
             mouse_old_y = m_y;
-            chan_tmp_old_y_pixel_offset[chn] = m_y;
-
-            break;
-          }
+            mainwindow->scrn_timer->stop();
         }
-      }
-  }
 
-  if(use_move_events)
-  {
-    mainwindow->scrn_timer->stop();
-  }
+        return;
+    }
+
+    //  printf("m_x: %i   m_y: %i   trig_pos_arrow_pos: %i\n",m_x, m_y, trig_pos_arrow_pos);
+
+    if (press_event->button() == Qt::LeftButton) {
+        if (m_y > (h + 12)) {
+            //      printf("m_x is: %i   m_y is: %i\n", m_x, m_y);
+
+            m_x += bordersize;
+
+            if ((m_x > 8) && (m_x < 118)) {
+                emit chan1Clicked();
+            } else if ((m_x > 133) && (m_x < 243)) {
+                emit chan2Clicked();
+            } else if ((m_x > 258) && (m_x < 368)) {
+                if (devparms->channel_cnt > 2) {
+                    emit chan3Clicked();
+                }
+            } else if ((m_x > 383) && (m_x < 493)) {
+                if (devparms->channel_cnt > 3) {
+                    emit chan4Clicked();
+                }
+            }
+
+            return;
+        }
+
+        if (((m_x > (trig_pos_arrow_pos - 8)) && (m_x < (trig_pos_arrow_pos + 8)) && (m_y > 5)
+             && (m_y < 24))
+            || ((trig_pos_arrow_pos > w) && (m_x > (trig_pos_arrow_pos - 24))
+                && (m_x <= trig_pos_arrow_pos) && (m_y > 9) && (m_y < 26))
+            || ((trig_pos_arrow_pos < 0) && (m_x < 24) && (m_x >= 0) && (m_y > 9) && (m_y < 26))) {
+            trig_pos_arrow_moving = 1;
+            use_move_events = 1;
+            setMouseTracking(true);
+            mouse_old_x = m_x;
+            mouse_old_y = m_y;
+        } else if (((m_x > w) && (m_x < (w + 26)) && (m_y > (trig_level_arrow_pos - 7))
+                    && (m_y < (trig_level_arrow_pos + 7)))
+                   || ((trig_level_arrow_pos < 0) && (m_x >= w) && (m_x < (w + 18)) && (m_y >= 0)
+                       && (m_y < 22))
+                   || ((trig_level_arrow_pos > h) && (m_x >= w) && (m_x < (w + 18)) && (m_y <= h)
+                       && (m_y > (h - 22)))) {
+            trig_level_arrow_moving = 1;
+            use_move_events = 1;
+            trig_line_visible = 1;
+            setMouseTracking(true);
+            mouse_old_x = m_x;
+            mouse_old_y = m_y;
+        } else {
+            for (chn = 0; chn < devparms->channel_cnt; chn++) {
+                if (!devparms->chandisplay[chn]) {
+                    continue;
+                }
+
+                if ((m_x > -26 && (m_x < 0) && (m_y > (chan_arrow_pos[chn] - 7))
+                     && (m_y < (chan_arrow_pos[chn] + 7)))
+                    || ((chan_arrow_pos[chn] < 0) && (m_x > -18) && (m_x <= 0) && (m_y >= 0)
+                        && (m_y < 22))
+                    || ((chan_arrow_pos[chn] > h) && (m_x > -18) && (m_x <= 0) && (m_y <= h)
+                        && (m_y > (h - 22)))) {
+                    chan_arrow_moving[chn] = 1;
+                    devparms->activechannel = chn;
+                    use_move_events = 1;
+                    setMouseTracking(true);
+                    mouse_old_x = m_x;
+                    mouse_old_y = m_y;
+                    chan_tmp_old_y_pixel_offset[chn] = m_y;
+
+                    break;
+                }
+            }
+        }
+    }
+
+    if (use_move_events) {
+        mainwindow->scrn_timer->stop();
+    }
 }
-
 
 void SignalCurve::mouseReleaseEvent(QMouseEvent *release_event)
 {
-  int chn, tmp;
+    int chn, tmp;
 
-  double lefttime, righttime, delayrange;
+    double lefttime, righttime, delayrange;
 
-  w = width() - (2 * bordersize);
-  h = height() - (2 * bordersize);
+    w = width() - (2 * bordersize);
+    h = height() - (2 * bordersize);
 
-  mouse_x = release_event->x() - bordersize;
-  mouse_y = release_event->y() - bordersize;
+    mouse_x = release_event->x() - bordersize;
+    mouse_y = release_event->y() - bordersize;
 
-  if(devparms == NULL)
-  {
-    return;
-  }
+    if (devparms == NULL) {
+        return;
+    }
 
-  if(!devparms->connected)
-  {
-    return;
-  }
+    if (!devparms->connected) {
+        return;
+    }
 
-  if(devparms->math_fft && devparms->math_fft_split)
-  {
+    if (devparms->math_fft && devparms->math_fft_split) {
+        use_move_events = 0;
+        setMouseTracking(false);
+
+        if (fft_arrow_moving) {
+            fft_arrow_moving = 0;
+
+            if (devparms->screenupdates_on == 1) {
+                mainwindow->scrn_timer->start(devparms->screentimerival);
+            }
+
+            if (devparms->fft_vscale > 9.0) {
+                devparms->fft_voffset = nearbyint(devparms->fft_voffset);
+            } else {
+                devparms->fft_voffset = nearbyint(devparms->fft_voffset * 10.0) / 10.0;
+            }
+
+            if (devparms->modelserie == 1) {
+                mainwindow->set_cue_cmd(
+                    QString(":MATH:OFFS %1").arg(devparms->fft_voffset).toLocal8Bit().constData());
+            }
+
+            QString label;
+            if (devparms->math_fft_unit == 0) {
+                label = QString("FFT position: %1V/Div")
+                            .arg(suffixed_metric_value(devparms->fft_voffset, 1));
+            } else {
+                label = QString("FFT position: %1dB").arg(devparms->fft_voffset, 0, 'f', 0);
+            }
+
+            mainwindow->statusLabel->setText(label);
+
+            update();
+        }
+
+        return;
+    }
+
+    if (trig_pos_arrow_moving) {
+        trig_pos_arrow_pos = mouse_x;
+
+        if (trig_pos_arrow_pos < 0) {
+            trig_pos_arrow_pos = 0;
+        }
+
+        if (trig_pos_arrow_pos > w) {
+            trig_pos_arrow_pos = w;
+        }
+
+        //    printf("w is %i   trig_pos_arrow_pos is %i\n", w, trig_pos_arrow_pos);
+
+        if (devparms->timebasedelayenable) {
+            devparms->timebasedelayoffset = ((devparms->timebasedelayscale
+                                              * (double) devparms->hordivisions)
+                                             / w)
+                                            * ((w / 2) - trig_pos_arrow_pos);
+
+            tmp = devparms->timebasedelayoffset / (devparms->timebasedelayscale / 50);
+
+            devparms->timebasedelayoffset = (devparms->timebasedelayscale / 50) * tmp;
+
+            lefttime = ((devparms->hordivisions / 2) * devparms->timebasescale)
+                       - devparms->timebaseoffset;
+
+            righttime = ((devparms->hordivisions / 2) * devparms->timebasescale)
+                        + devparms->timebaseoffset;
+
+            delayrange = (devparms->hordivisions / 2) * devparms->timebasedelayscale;
+
+            if (devparms->timebasedelayoffset < -(lefttime - delayrange)) {
+                devparms->timebasedelayoffset = -(lefttime - delayrange);
+            }
+
+            if (devparms->timebasedelayoffset > (righttime - delayrange)) {
+                devparms->timebasedelayoffset = (righttime - delayrange);
+            }
+
+            mainwindow->statusLabel->setText(
+                QString("Delayed timebase position: %1s")
+                    .arg(suffixed_metric_value(devparms->timebasedelayoffset, 2)));
+
+            mainwindow->set_cue_cmd(QString(":TIM:DEL:OFFS %1")
+                                        .arg(devparms->timebasedelayoffset)
+                                        .toLocal8Bit()
+                                        .constData());
+        } else {
+            devparms->timebaseoffset = ((devparms->timebasescale * (double) devparms->hordivisions)
+                                        / w)
+                                       * ((w / 2) - trig_pos_arrow_pos);
+
+            tmp = devparms->timebaseoffset / (devparms->timebasescale / 50);
+
+            devparms->timebaseoffset = (devparms->timebasescale / 50) * tmp;
+
+            mainwindow->statusLabel->setText(
+                QString("Horizontal position: %1s")
+                    .arg(suffixed_metric_value(devparms->timebaseoffset, 2)));
+
+            mainwindow->set_cue_cmd(
+                QString(":TIM:OFFS %1").arg(devparms->timebaseoffset).toLocal8Bit().constData());
+        }
+    } else if (trig_level_arrow_moving) {
+        if (devparms->triggeredgesource > 3) {
+            return;
+        }
+
+        trig_level_arrow_pos = mouse_y;
+
+        if (trig_level_arrow_pos < 0) {
+            trig_level_arrow_pos = 0;
+        }
+
+        if (trig_level_arrow_pos > h) {
+            trig_level_arrow_pos = h;
+        }
+
+        //       printf("chanoffset[chn] is: %e   chanscale[chn] is %e   trig_level_arrow_pos is: %i   v_sense is: %e\n",
+        //              devparms->chanoffset[chn], devparms->chanscale[chn], trig_level_arrow_pos, v_sense);
+
+        devparms->triggeredgelevel[devparms->triggeredgesource]
+            = (((h / 2) - trig_level_arrow_pos)
+               * ((devparms->chanscale[devparms->triggeredgesource] * devparms->vertdivisions) / h))
+              - devparms->chanoffset[devparms->triggeredgesource];
+
+        tmp = devparms->triggeredgelevel[devparms->triggeredgesource]
+              / (devparms->chanscale[devparms->triggeredgesource] / 50);
+
+        devparms->triggeredgelevel[devparms->triggeredgesource]
+            = (devparms->chanscale[devparms->triggeredgesource] / 50) * tmp;
+
+        mainwindow->statusLabel->setText(
+            QString("Trigger level: %1%2")
+                .arg(suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource],
+                                           2)
+                         .arg(QString::fromLocal8Bit(
+                             devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]],
+                             2))));
+
+        mainwindow->set_cue_cmd(QString(":TRIG:EDG:LEV %1")
+                                    .arg(devparms->triggeredgelevel[devparms->triggeredgesource])
+                                    .toLocal8Bit()
+                                    .constData());
+
+        trig_line_timer->start(1300);
+    } else {
+        for (chn = 0; chn < devparms->channel_cnt; chn++) {
+            if (!devparms->chandisplay[chn]) {
+                continue;
+            }
+
+            if (chan_arrow_moving[chn]) {
+                chan_arrow_pos[chn] = mouse_y;
+
+                if (chan_arrow_pos[chn] < 0) {
+                    chan_arrow_pos[chn] = 0;
+                }
+
+                if (chan_arrow_pos[chn] > h) {
+                    chan_arrow_pos[chn] = h;
+                }
+
+                //       printf("chanoffset[chn] is: %e   chanscale[chn] is %e   chan_arrow_pos[chn] is: %i   v_sense is: %e\n",
+                //              devparms->chanoffset[chn], devparms->chanscale[chn], chan_arrow_pos[chn], v_sense);
+
+                devparms->chanoffset[chn] = ((h / 2) - chan_arrow_pos[chn])
+                                            * ((devparms->chanscale[chn] * devparms->vertdivisions)
+                                               / h);
+
+                tmp = devparms->chanoffset[chn] / (devparms->chanscale[chn] / 50);
+
+                devparms->chanoffset[chn] = (devparms->chanscale[chn] / 50) * tmp;
+
+                mainwindow->statusLabel->setText(
+                    QString("Channel %1 offset: %2%3")
+                        .arg(chn + 1)
+                        .arg(suffixed_metric_value(devparms->chanoffset[chn], 3))
+                        .arg(QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[chn]],
+                                                    2)));
+
+                mainwindow->set_cue_cmd(QString(":CHAN%1:OFFS %1")
+                                            .arg(chn + 1)
+                                            .arg(devparms->chanoffset[chn])
+                                            .toLocal8Bit()
+                                            .constData());
+
+                devparms->activechannel = chn;
+
+                chan_tmp_y_pixel_offset[chn] = 0;
+
+                chan_tmp_old_y_pixel_offset[chn] = 0;
+
+                break;
+            }
+        }
+    }
+
+    for (chn = 0; chn < MAX_CHNS; chn++) {
+        chan_arrow_moving[chn] = 0;
+    }
+    trig_level_arrow_moving = 0;
+    trig_pos_arrow_moving = 0;
     use_move_events = 0;
     setMouseTracking(false);
 
-    if(fft_arrow_moving)
-    {
-      fft_arrow_moving = 0;
-
-      if(devparms->screenupdates_on == 1)
-      {
+    if (devparms->screenupdates_on == 1) {
         mainwindow->scrn_timer->start(devparms->screentimerival);
-      }
-
-      if(devparms->fft_vscale > 9.0)
-      {
-        devparms->fft_voffset = nearbyint(devparms->fft_voffset);
-      }
-      else
-      {
-        devparms->fft_voffset = nearbyint(devparms->fft_voffset * 10.0) / 10.0;
-      }
-
-      if(devparms->modelserie == 1)
-      {
-        mainwindow->set_cue_cmd(QString(":MATH:OFFS %1").arg( devparms->fft_voffset).toLocal8Bit().constData());
-      }
-
-      QString label;
-      if(devparms->math_fft_unit == 0)
-      {
-        label = QString("FFT position: %1V/Div").arg(suffixed_metric_value(devparms->fft_voffset, 1));
-      }
-      else
-      {
-        label = QString("FFT position: %1dB").arg(devparms->fft_voffset,0,'f',0);
-      }
-
-      mainwindow->statusLabel->setText(label);
-
-      update();
-    }
-
-    return;
-  }
-
-  if(trig_pos_arrow_moving)
-  {
-    trig_pos_arrow_pos = mouse_x;
-
-    if(trig_pos_arrow_pos < 0)
-    {
-      trig_pos_arrow_pos = 0;
-    }
-
-    if(trig_pos_arrow_pos > w)
-    {
-      trig_pos_arrow_pos = w;
-    }
-
-//    printf("w is %i   trig_pos_arrow_pos is %i\n", w, trig_pos_arrow_pos);
-
-    if(devparms->timebasedelayenable)
-    {
-      devparms->timebasedelayoffset = ((devparms->timebasedelayscale * (double)devparms->hordivisions) / w) * ((w / 2) - trig_pos_arrow_pos);
-
-      tmp = devparms->timebasedelayoffset / (devparms->timebasedelayscale / 50);
-
-      devparms->timebasedelayoffset = (devparms->timebasedelayscale / 50) * tmp;
-
-      lefttime = ((devparms->hordivisions / 2) * devparms->timebasescale) - devparms->timebaseoffset;
-
-      righttime = ((devparms->hordivisions / 2) * devparms->timebasescale) + devparms->timebaseoffset;
-
-      delayrange = (devparms->hordivisions / 2) * devparms->timebasedelayscale;
-
-      if(devparms->timebasedelayoffset < -(lefttime - delayrange))
-      {
-        devparms->timebasedelayoffset = -(lefttime - delayrange);
-      }
-
-      if(devparms->timebasedelayoffset > (righttime - delayrange))
-      {
-        devparms->timebasedelayoffset = (righttime - delayrange);
-      }
-
-      mainwindow->statusLabel->setText(QString("Delayed timebase position: %1s").arg(suffixed_metric_value(devparms->timebasedelayoffset, 2)));
-
-      mainwindow->set_cue_cmd(QString(":TIM:DEL:OFFS %1").arg(devparms->timebasedelayoffset).toLocal8Bit().constData());
-    }
-    else
-    {
-      devparms->timebaseoffset = ((devparms->timebasescale * (double)devparms->hordivisions) / w) * ((w / 2) - trig_pos_arrow_pos);
-
-      tmp = devparms->timebaseoffset / (devparms->timebasescale / 50);
-
-      devparms->timebaseoffset = (devparms->timebasescale / 50) * tmp;
-
-      mainwindow->statusLabel->setText(QString("Horizontal position: %1s").arg(suffixed_metric_value(devparms->timebaseoffset, 2)));
-
-      mainwindow->set_cue_cmd(QString(":TIM:OFFS %1").arg(devparms->timebaseoffset).toLocal8Bit().constData());
-    }
-  }
-  else if(trig_level_arrow_moving)
-    {
-      if(devparms->triggeredgesource > 3)
-      {
-        return;
-      }
-
-      trig_level_arrow_pos = mouse_y;
-
-      if(trig_level_arrow_pos < 0)
-      {
-        trig_level_arrow_pos = 0;
-      }
-
-      if(trig_level_arrow_pos > h)
-      {
-        trig_level_arrow_pos = h;
-      }
-
-  //       printf("chanoffset[chn] is: %e   chanscale[chn] is %e   trig_level_arrow_pos is: %i   v_sense is: %e\n",
-  //              devparms->chanoffset[chn], devparms->chanscale[chn], trig_level_arrow_pos, v_sense);
-
-      devparms->triggeredgelevel[devparms->triggeredgesource] = (((h / 2) - trig_level_arrow_pos) * ((devparms->chanscale[devparms->triggeredgesource] * devparms->vertdivisions) / h))
-                                                                - devparms->chanoffset[devparms->triggeredgesource];
-
-      tmp = devparms->triggeredgelevel[devparms->triggeredgesource] / (devparms->chanscale[devparms->triggeredgesource] / 50);
-
-      devparms->triggeredgelevel[devparms->triggeredgesource] = (devparms->chanscale[devparms->triggeredgesource] / 50) * tmp;
-
-      mainwindow->statusLabel->setText(QString("Trigger level: %1%2")
-        .arg(suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource], 2)
-        .arg(QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]],2))));
-
-      mainwindow->set_cue_cmd(QString(":TRIG:EDG:LEV %1").arg(devparms->triggeredgelevel[devparms->triggeredgesource])
-        .toLocal8Bit().constData());
-
-      trig_line_timer->start(1300);
-    }
-    else
-    {
-      for(chn=0; chn<devparms->channel_cnt; chn++)
-      {
-        if(!devparms->chandisplay[chn])
-        {
-          continue;
-        }
-
-        if(chan_arrow_moving[chn])
-        {
-          chan_arrow_pos[chn] = mouse_y;
-
-          if(chan_arrow_pos[chn] < 0)
-          {
-            chan_arrow_pos[chn] = 0;
-          }
-
-          if(chan_arrow_pos[chn] > h)
-          {
-            chan_arrow_pos[chn] = h;
-          }
-
-    //       printf("chanoffset[chn] is: %e   chanscale[chn] is %e   chan_arrow_pos[chn] is: %i   v_sense is: %e\n",
-    //              devparms->chanoffset[chn], devparms->chanscale[chn], chan_arrow_pos[chn], v_sense);
-
-          devparms->chanoffset[chn] = ((h / 2) - chan_arrow_pos[chn]) * ((devparms->chanscale[chn] * devparms->vertdivisions) / h);
-
-          tmp = devparms->chanoffset[chn] / (devparms->chanscale[chn] / 50);
-
-          devparms->chanoffset[chn] = (devparms->chanscale[chn] / 50) * tmp;
-
-          mainwindow->statusLabel->setText(QString("Channel %1 offset: %2%3").arg(chn + 1)
-            .arg(suffixed_metric_value(devparms->chanoffset[chn], 3))
-            .arg(QString::fromLocal8Bit(devparms->chanunitstr[devparms->chanunit[chn]],2)));
-
-          mainwindow->set_cue_cmd(QString(":CHAN%1:OFFS %1").arg(chn + 1).arg(devparms->chanoffset[chn])
-            .toLocal8Bit().constData());
-
-          devparms->activechannel = chn;
-
-          chan_tmp_y_pixel_offset[chn] = 0;
-
-          chan_tmp_old_y_pixel_offset[chn] = 0;
-
-          break;
-        }
-      }
-    }
-
-  for(chn=0; chn<MAX_CHNS; chn++)
-  {
-    chan_arrow_moving[chn] = 0;
-  }
-  trig_level_arrow_moving = 0;
-  trig_pos_arrow_moving = 0;
-  use_move_events = 0;
-  setMouseTracking(false);
-
-  if(devparms->screenupdates_on == 1)
-  {
-    mainwindow->scrn_timer->start(devparms->screentimerival);
-  }
-
-  update();
-}
-
-
-void SignalCurve::mouseMoveEvent(QMouseEvent *move_event)
-{
-  int chn, h_fft, a_pos;
-
-  double dtmp;
-
-  if(!use_move_events)
-  {
-    return;
-  }
-
-  mouse_x = move_event->x() - bordersize;
-  mouse_y = move_event->y() - bordersize;
-
-  if(devparms == NULL)
-  {
-    return;
-  }
-
-  if(!devparms->connected)
-  {
-    return;
-  }
-
-  if(devparms->math_fft && devparms->math_fft_split)
-  {
-    mouse_y -= ((h / 3) + 15);
-
-    h_fft = h * 0.64;
-
-    if(fft_arrow_moving)
-    {
-      a_pos = mouse_y;
-
-      if(a_pos < 0)
-      {
-        a_pos = 0;
-      }
-
-      if(a_pos > (h * 0.64))
-      {
-        a_pos = (h * 0.64);
-      }
-
-      devparms->fft_voffset = ((h_fft / 2) - a_pos) * (devparms->fft_vscale * 8.0 / h_fft);
-
-      label_active = LABEL_ACTIVE_FFT;
-
-      mainwindow->label_timer->start(LABEL_TIMER_IVAL);
     }
 
     update();
-
-    return;
-  }
-
-  if(trig_pos_arrow_moving)
-  {
-    trig_pos_arrow_pos = mouse_x;
-
-    if(trig_pos_arrow_pos < 0)
-    {
-      trig_pos_arrow_pos = 0;
-    }
-
-    if(trig_pos_arrow_pos > w)
-    {
-      trig_pos_arrow_pos = w;
-    }
-  }
-  else if(trig_level_arrow_moving)
-    {
-      trig_level_arrow_pos = mouse_y;
-
-      if(trig_level_arrow_pos < 0)
-      {
-        trig_level_arrow_pos = 0;
-      }
-
-      if(trig_level_arrow_pos > h)
-      {
-        trig_level_arrow_pos = h;
-      }
-
-      devparms->triggeredgelevel[devparms->triggeredgesource] = (((h / 2) - trig_level_arrow_pos) * ((devparms->chanscale[devparms->triggeredgesource] * devparms->vertdivisions) / h))
-                                                                - devparms->chanoffset[devparms->triggeredgesource];
-
-      dtmp = devparms->triggeredgelevel[devparms->triggeredgesource] / (devparms->chanscale[devparms->triggeredgesource] / 50);
-
-      devparms->triggeredgelevel[devparms->triggeredgesource] = (devparms->chanscale[devparms->triggeredgesource] / 50) * dtmp;
-
-      label_active = LABEL_ACTIVE_TRIG;
-
-      mainwindow->label_timer->start(LABEL_TIMER_IVAL);
-    }
-    else
-    {
-      for(chn=0; chn<devparms->channel_cnt; chn++)
-      {
-        if(!devparms->chandisplay[chn])
-        {
-          continue;
-        }
-
-        if(chan_arrow_moving[chn])
-        {
-          chan_arrow_pos[chn] = mouse_y;
-
-          if(chan_arrow_pos[chn] < 0)
-          {
-            chan_arrow_pos[chn] = 0;
-          }
-
-          if(chan_arrow_pos[chn] > h)
-          {
-            chan_arrow_pos[chn] = h;
-          }
-
-          devparms->chanoffset[chn] = ((h / 2) - chan_arrow_pos[chn]) * ((devparms->chanscale[chn] * devparms->vertdivisions) / h);
-
-//          chan_tmp_y_pixel_offset[chn] = (h / 2) - chan_arrow_pos[chn];
-
-          chan_tmp_y_pixel_offset[chn] = chan_tmp_old_y_pixel_offset[chn] - chan_arrow_pos[chn];
-
-          dtmp = devparms->chanoffset[chn] / (devparms->chanscale[chn] / 50);
-
-          devparms->chanoffset[chn] = (devparms->chanscale[chn] / 50) * dtmp;
-
-          label_active = chn + 1;
-
-          mainwindow->label_timer->start(LABEL_TIMER_IVAL);
-
-          break;
-        }
-      }
-    }
-
-  update();
 }
 
+void SignalCurve::mouseMoveEvent(QMouseEvent *move_event)
+{
+    int chn, h_fft, a_pos;
+
+    double dtmp;
+
+    if (!use_move_events) {
+        return;
+    }
+
+    mouse_x = move_event->x() - bordersize;
+    mouse_y = move_event->y() - bordersize;
+
+    if (devparms == NULL) {
+        return;
+    }
+
+    if (!devparms->connected) {
+        return;
+    }
+
+    if (devparms->math_fft && devparms->math_fft_split) {
+        mouse_y -= ((h / 3) + 15);
+
+        h_fft = h * 0.64;
+
+        if (fft_arrow_moving) {
+            a_pos = mouse_y;
+
+            if (a_pos < 0) {
+                a_pos = 0;
+            }
+
+            if (a_pos > (h * 0.64)) {
+                a_pos = (h * 0.64);
+            }
+
+            devparms->fft_voffset = ((h_fft / 2) - a_pos) * (devparms->fft_vscale * 8.0 / h_fft);
+
+            label_active = LABEL_ACTIVE_FFT;
+
+            mainwindow->label_timer->start(LABEL_TIMER_IVAL);
+        }
+
+        update();
+
+        return;
+    }
+
+    if (trig_pos_arrow_moving) {
+        trig_pos_arrow_pos = mouse_x;
+
+        if (trig_pos_arrow_pos < 0) {
+            trig_pos_arrow_pos = 0;
+        }
+
+        if (trig_pos_arrow_pos > w) {
+            trig_pos_arrow_pos = w;
+        }
+    } else if (trig_level_arrow_moving) {
+        trig_level_arrow_pos = mouse_y;
+
+        if (trig_level_arrow_pos < 0) {
+            trig_level_arrow_pos = 0;
+        }
+
+        if (trig_level_arrow_pos > h) {
+            trig_level_arrow_pos = h;
+        }
+
+        devparms->triggeredgelevel[devparms->triggeredgesource]
+            = (((h / 2) - trig_level_arrow_pos)
+               * ((devparms->chanscale[devparms->triggeredgesource] * devparms->vertdivisions) / h))
+              - devparms->chanoffset[devparms->triggeredgesource];
+
+        dtmp = devparms->triggeredgelevel[devparms->triggeredgesource]
+               / (devparms->chanscale[devparms->triggeredgesource] / 50);
+
+        devparms->triggeredgelevel[devparms->triggeredgesource]
+            = (devparms->chanscale[devparms->triggeredgesource] / 50) * dtmp;
+
+        label_active = LABEL_ACTIVE_TRIG;
+
+        mainwindow->label_timer->start(LABEL_TIMER_IVAL);
+    } else {
+        for (chn = 0; chn < devparms->channel_cnt; chn++) {
+            if (!devparms->chandisplay[chn]) {
+                continue;
+            }
+
+            if (chan_arrow_moving[chn]) {
+                chan_arrow_pos[chn] = mouse_y;
+
+                if (chan_arrow_pos[chn] < 0) {
+                    chan_arrow_pos[chn] = 0;
+                }
+
+                if (chan_arrow_pos[chn] > h) {
+                    chan_arrow_pos[chn] = h;
+                }
+
+                devparms->chanoffset[chn] = ((h / 2) - chan_arrow_pos[chn])
+                                            * ((devparms->chanscale[chn] * devparms->vertdivisions)
+                                               / h);
+
+                //          chan_tmp_y_pixel_offset[chn] = (h / 2) - chan_arrow_pos[chn];
+
+                chan_tmp_y_pixel_offset[chn] = chan_tmp_old_y_pixel_offset[chn]
+                                               - chan_arrow_pos[chn];
+
+                dtmp = devparms->chanoffset[chn] / (devparms->chanscale[chn] / 50);
+
+                devparms->chanoffset[chn] = (devparms->chanscale[chn] / 50) * dtmp;
+
+                label_active = chn + 1;
+
+                mainwindow->label_timer->start(LABEL_TIMER_IVAL);
+
+                break;
+            }
+        }
+    }
+
+    update();
+}
 
 void SignalCurve::trig_line_timer_handler()
 {
-  trig_line_visible = 0;
+    trig_line_visible = 0;
 }
-
 
 void SignalCurve::setTrigLineVisible(void)
 {
-  trig_line_visible = 1;
+    trig_line_visible = 1;
 
-  trig_line_timer->start(1300);
+    trig_line_timer->start(1300);
 }
-
 
 void SignalCurve::trig_stat_timer_handler()
 {
-  if(!trig_stat_flash)
-  {
-    trig_stat_timer->stop();
+    if (!trig_stat_flash) {
+        trig_stat_timer->stop();
 
-    return;
-  }
+        return;
+    }
 
-  if(trig_stat_flash == 1)
-  {
-    trig_stat_flash = 2;
-  }
-  else
-  {
-    trig_stat_flash = 1;
-  }
+    if (trig_stat_flash == 1) {
+        trig_stat_flash = 2;
+    } else {
+        trig_stat_flash = 1;
+    }
 }
 
-
-void SignalCurve::paintLabel(QPainter *painter, int xpos, int ypos, int xw, int yh, const QString &str, QColor color)
+void SignalCurve::paintLabel(
+    QPainter *painter, int xpos, int ypos, int xw, int yh, const QString &str, QColor color)
 {
-  QPainterPath path;
+    QPainterPath path;
 
-  path.addRoundedRect(xpos, ypos, xw, yh, 3, 3);
+    path.addRoundedRect(xpos, ypos, xw, yh, 3, 3);
 
-  painter->fillPath(path, Qt::black);
+    painter->fillPath(path, Qt::black);
 
-  painter->setPen(color);
+    painter->setPen(color);
 
-  painter->drawRoundedRect(xpos, ypos, xw, yh, 3, 3);
+    painter->drawRoundedRect(xpos, ypos, xw, yh, 3, 3);
 
-  painter->drawText(xpos, ypos, xw, yh, Qt::AlignCenter, str);
+    painter->drawText(xpos, ypos, xw, yh, Qt::AlignCenter, str);
 }
-
 
 void SignalCurve::paintCounterLabel(QPainter *painter, int xpos, int ypos)
 {
-  int i;
+    int i;
 
-  QPainterPath path;
+    QPainterPath path;
 
-  path.addRoundedRect(xpos, ypos, 175, 20, 3, 3);
+    path.addRoundedRect(xpos, ypos, 175, 20, 3, 3);
 
-  painter->fillPath(path, Qt::black);
+    painter->fillPath(path, Qt::black);
 
-  painter->setPen(Qt::darkGray);
+    painter->setPen(Qt::darkGray);
 
-  painter->drawRoundedRect(xpos, ypos, 175, 20, 3, 3);
+    painter->drawRoundedRect(xpos, ypos, 175, 20, 3, 3);
 
-  path = QPainterPath();
+    path = QPainterPath();
 
-  path.addRoundedRect(xpos + 4, ypos + 3, 14, 14, 3, 3);
+    path.addRoundedRect(xpos + 4, ypos + 3, 14, 14, 3, 3);
 
-  painter->fillPath(path, SignalColor[devparms->countersrc - 1]);
+    painter->fillPath(path, SignalColor[devparms->countersrc - 1]);
 
-  painter->setPen(Qt::black);
+    painter->setPen(Qt::black);
 
-  painter->drawLine(xpos + 7, ypos + 6, xpos + 15, ypos + 6);
+    painter->drawLine(xpos + 7, ypos + 6, xpos + 15, ypos + 6);
 
-  painter->drawLine(xpos + 11, ypos + 6, xpos + 11, ypos + 14);
+    painter->drawLine(xpos + 11, ypos + 6, xpos + 11, ypos + 14);
 
-  painter->setPen(Qt::white);
+    painter->setPen(Qt::white);
 
-  QString str;
-  if((devparms->counterfreq < 15) || (devparms->counterfreq > 1.1e9))
-  {
-    str = "< 15 Hz";
-  }
-  else
-  {
-    str = suffixed_metric_value(devparms->counterfreq, 5);
+    QString str;
+    if ((devparms->counterfreq < 15) || (devparms->counterfreq > 1.1e9)) {
+        str = "< 15 Hz";
+    } else {
+        str = suffixed_metric_value(devparms->counterfreq, 5);
 
-    str += "Hz";
-  }
+        str += "Hz";
+    }
 
-  for(i=0; i<3; i++)
-  {
+    for (i = 0; i < 3; i++) {
+        painter->drawLine(xpos + 22 + (i * 14), ypos + 14, xpos + 29 + (i * 14), ypos + 14);
+        painter->drawLine(xpos + 29 + (i * 14), ypos + 14, xpos + 29 + (i * 14), ypos + 7);
+        painter->drawLine(xpos + 29 + (i * 14), ypos + 7, xpos + 36 + (i * 14), ypos + 7);
+        painter->drawLine(xpos + 36 + (i * 14), ypos + 7, xpos + 36 + (i * 14), ypos + 14);
+    }
     painter->drawLine(xpos + 22 + (i * 14), ypos + 14, xpos + 29 + (i * 14), ypos + 14);
-    painter->drawLine(xpos + 29 + (i * 14), ypos + 14, xpos + 29 + (i * 14), ypos + 7);
-    painter->drawLine(xpos + 29 + (i * 14), ypos + 7, xpos + 36 + (i * 14), ypos + 7);
-    painter->drawLine(xpos + 36 + (i * 14), ypos + 7, xpos + 36 + (i * 14), ypos + 14);
-  }
-  painter->drawLine(xpos + 22 + (i * 14), ypos + 14, xpos + 29 + (i * 14), ypos + 14);
 
-  painter->drawText(xpos + 75, ypos, 100, 20, Qt::AlignCenter, str);
+    painter->drawText(xpos + 75, ypos, 100, 20, Qt::AlignCenter, str);
 }
-
 
 void SignalCurve::paintPlaybackLabel(QPainter *painter, int xpos, int ypos)
 {
-  QPainterPath path;
+    QPainterPath path;
 
-  path.addRoundedRect(xpos, ypos, 175, 20, 3, 3);
+    path.addRoundedRect(xpos, ypos, 175, 20, 3, 3);
 
-  painter->fillPath(path, Qt::black);
+    painter->fillPath(path, Qt::black);
 
-  painter->setPen(Qt::darkGray);
+    painter->setPen(Qt::darkGray);
 
-  painter->drawRoundedRect(xpos, ypos, 175, 20, 3, 3);
+    painter->drawRoundedRect(xpos, ypos, 175, 20, 3, 3);
 
-  if(devparms->func_wrec_operate || !devparms->func_has_record)
-  {
-    painter->fillRect(xpos + 5, ypos + 5, 10, 10, Qt::red);
+    if (devparms->func_wrec_operate || !devparms->func_has_record) {
+        painter->fillRect(xpos + 5, ypos + 5, 10, 10, Qt::red);
 
-    painter->setPen(Qt::red);
+        painter->setPen(Qt::red);
 
-    painter->drawText(xpos + 30, ypos, 120, 20, Qt::AlignCenter, QString("0/%1").arg(devparms->func_wrec_fend));
-  }
-  else
-  {
-    painter->fillRect(xpos + 5, ypos + 5, 10, 10, Qt::green);
+        painter->drawText(xpos + 30,
+                          ypos,
+                          120,
+                          20,
+                          Qt::AlignCenter,
+                          QString("0/%1").arg(devparms->func_wrec_fend));
+    } else {
+        painter->fillRect(xpos + 5, ypos + 5, 10, 10, Qt::green);
 
-    painter->setPen(Qt::green);
+        painter->setPen(Qt::green);
 
-    painter->drawText(xpos + 30, ypos, 120, 20, Qt::AlignCenter,
-                      QString("%1/%2").arg(devparms->func_wplay_fcur).arg(devparms->func_wrec_fend));
-  }
+        painter->drawText(xpos + 30,
+                          ypos,
+                          120,
+                          20,
+                          Qt::AlignCenter,
+                          QString("%1/%2")
+                              .arg(devparms->func_wplay_fcur)
+                              .arg(devparms->func_wrec_fend));
+    }
 }
-
 
 bool SignalCurve::hasMoveEvent(void)
 {
-  if(use_move_events)
-  {
-    return true;
-  }
+    if (use_move_events) {
+        return true;
+    }
 
-  return false;
+    return false;
 }
-
 
 void SignalCurve::draw_decoder(QPainter *painter, int dw, int dh)
 {
-  int i, j, k,
-      cell_width,
-      base_line,
-      line_h_uart_tx=0,
-      line_h_uart_rx=0,
-      line_h_spi_mosi=0,
-      line_h_spi_miso=0,
-      spi_chars=1,
-      pixel_per_bit=1;
+    int i, j, k, cell_width, base_line, line_h_uart_tx = 0, line_h_uart_rx = 0, line_h_spi_mosi = 0,
+                                        line_h_spi_miso = 0, spi_chars = 1, pixel_per_bit = 1;
 
-  double pix_per_smpl;
+    double pix_per_smpl;
 
-  if(devparms->modelserie != 1)
-  {
-    base_line = (dh / 2) - (((double)dh / 400.0) * devparms->math_decode_pos);
-  }
-  else
-  {
-    base_line = ((double)dh / 400.0) * devparms->math_decode_pos;
-  }
-
-  pix_per_smpl = (double)dw / (devparms->hordivisions * 100);
-
-  switch(devparms->math_decode_format)
-  {
-    case 0:  cell_width = 40;  // hex
-             break;
-    case 1:  cell_width = 30;  // ASCII
-             break;
-    case 2:  cell_width = 30;  // decimal;
-             break;
-    case 3:  cell_width = 70;  // binary
-             break;
-    default: cell_width = 70;  // line
-             break;
-  }
-
-  if(devparms->math_decode_mode == DECODE_MODE_UART)
-  {
-    if(devparms->timebasedelayenable)
-    {
-      pixel_per_bit = ((double)dw / 12.0 / devparms->timebasedelayscale) / (double)devparms->math_decode_uart_baud;
-    }
-    else
-    {
-      pixel_per_bit = ((double)dw / 12.0 / devparms->timebasescale) / (double)devparms->math_decode_uart_baud;
+    if (devparms->modelserie != 1) {
+        base_line = (dh / 2) - (((double) dh / 400.0) * devparms->math_decode_pos);
+    } else {
+        base_line = ((double) dh / 400.0) * devparms->math_decode_pos;
     }
 
-    cell_width = pixel_per_bit * devparms->math_decode_uart_width;
+    pix_per_smpl = (double) dw / (devparms->hordivisions * 100);
 
-    painter->setPen(Qt::green);
-
-    if(devparms->math_decode_uart_tx && devparms->math_decode_uart_rx)
-    {
-      line_h_uart_tx = base_line - 5;
-
-      line_h_uart_rx = base_line + 45;
-
-      painter->drawLine(0, line_h_uart_tx, dw, line_h_uart_tx);
-
-      painter->drawLine(0, line_h_uart_rx, dw, line_h_uart_rx);
+    switch (devparms->math_decode_format) {
+    case 0:
+        cell_width = 40; // hex
+        break;
+    case 1:
+        cell_width = 30; // ASCII
+        break;
+    case 2:
+        cell_width = 30; // decimal;
+        break;
+    case 3:
+        cell_width = 70; // binary
+        break;
+    default:
+        cell_width = 70; // line
+        break;
     }
-    else if(devparms->math_decode_uart_tx)
-      {
-        line_h_uart_tx = base_line;
 
-        painter->drawLine(0, line_h_uart_tx, dw, line_h_uart_tx);
-      }
-      else if(devparms->math_decode_uart_rx)
-        {
-          line_h_uart_rx = base_line;
-
-          painter->drawLine(0, line_h_uart_rx, dw, line_h_uart_rx);
+    if (devparms->math_decode_mode == DECODE_MODE_UART) {
+        if (devparms->timebasedelayenable) {
+            pixel_per_bit = ((double) dw / 12.0 / devparms->timebasedelayscale)
+                            / (double) devparms->math_decode_uart_baud;
+        } else {
+            pixel_per_bit = ((double) dw / 12.0 / devparms->timebasescale)
+                            / (double) devparms->math_decode_uart_baud;
         }
 
-    if(devparms->math_decode_uart_tx)
-    {
-      for(i=0; i<devparms->math_decode_uart_tx_nval; i++)
-      {
-        painter->fillRect(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 26, Qt::black);
+        cell_width = pixel_per_bit * devparms->math_decode_uart_width;
 
-        painter->drawRect(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 26);
-      }
-    }
+        painter->setPen(Qt::green);
 
-    if(devparms->math_decode_uart_rx)
-    {
-      for(i=0; i<devparms->math_decode_uart_rx_nval; i++)
-      {
-        painter->fillRect(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 26, Qt::black);
+        if (devparms->math_decode_uart_tx && devparms->math_decode_uart_rx) {
+            line_h_uart_tx = base_line - 5;
 
-        painter->drawRect(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 26);
-      }
-    }
+            line_h_uart_rx = base_line + 45;
 
-    painter->setPen(Qt::white);
+            painter->drawLine(0, line_h_uart_tx, dw, line_h_uart_tx);
 
-    if(devparms->math_decode_uart_tx)
-    {
-      switch(devparms->math_decode_format)
-      {
-        case 0: painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[HEX]");
-                break;
-        case 1: painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[ASC]");
-                break;
-        case 2: painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[DEC]");
-                break;
-        case 3: painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[BIN]");
-                break;
-        case 4: painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[LINE]");
-                break;
-        default: painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[\?\?\?]");
-                break;
-      }
+            painter->drawLine(0, line_h_uart_rx, dw, line_h_uart_rx);
+        } else if (devparms->math_decode_uart_tx) {
+            line_h_uart_tx = base_line;
 
-      for(i=0; i<devparms->math_decode_uart_tx_nval; i++)
-      {
-        if(devparms->math_decode_format == 0)  // hex
-        {
-          painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter,
-                            QString::number(devparms->math_decode_uart_tx_val[i],16));
+            painter->drawLine(0, line_h_uart_tx, dw, line_h_uart_tx);
+        } else if (devparms->math_decode_uart_rx) {
+            line_h_uart_rx = base_line;
+
+            painter->drawLine(0, line_h_uart_rx, dw, line_h_uart_rx);
         }
-        else if(devparms->math_decode_format == 1)  // ASCII
-          {
-            painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter,
-                              ascii_decode_control_char(devparms->math_decode_uart_tx_val[i]));
-          }
-          else if(devparms->math_decode_format == 2)  // decimal
-            {
-              painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter,
-                                QString::number((unsigned int)devparms->math_decode_uart_tx_val[i]));
+
+        if (devparms->math_decode_uart_tx) {
+            for (i = 0; i < devparms->math_decode_uart_tx_nval; i++) {
+                painter->fillRect(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                  line_h_uart_tx - 13,
+                                  cell_width,
+                                  26,
+                                  Qt::black);
+
+                painter->drawRect(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                  line_h_uart_tx - 13,
+                                  cell_width,
+                                  26);
             }
-            else if(devparms->math_decode_format == 3)  // binary
-              {
-                QString str;
-                for(j=0; j<devparms->math_decode_uart_width; j++)
-                {
-                  str += ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
-                }
-
-                std::reverse(str.begin(),str.end());
-
-                painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
-              }
-              else if(devparms->math_decode_format == 4)  // line
-                {
-                  QString str;
-                  for(j=0; j<devparms->math_decode_uart_width; j++)
-                  {
-                    str += ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
-                  }
-
-                  painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
-                }
-
-          if(devparms->math_decode_uart_tx_err[i])
-          {
-            painter->setPen(Qt::red);
-
-            painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl + cell_width, line_h_uart_tx - 13, 25, 25, Qt::AlignCenter, "?");
-
-            painter->setPen(Qt::white);
-          }
-      }
-    }
-
-    if(devparms->math_decode_uart_rx)
-    {
-      switch(devparms->math_decode_format)
-      {
-        case 0: painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[HEX]");
-                break;
-        case 1: painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[ASC]");
-                break;
-        case 2: painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[DEC]");
-                break;
-        case 3: painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[BIN]");
-                break;
-        case 4: painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[LINE]");
-                break;
-        default: painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, R"(Rx[???])");
-                break;
-      }
-
-      for(i=0; i<devparms->math_decode_uart_rx_nval; i++)
-      {
-        if(devparms->math_decode_format == 0)  // hex
-        {
-          painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter,
-                            QString::number(devparms->math_decode_uart_rx_val[i],16));
         }
-        else if(devparms->math_decode_format == 1)  // ASCII
-          {
-            painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter,
-                              ascii_decode_control_char(devparms->math_decode_uart_rx_val[i]));
-          }
-          else if(devparms->math_decode_format == 2)  // decimal
-            {
-              painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter,
-                                QString::number((unsigned int)devparms->math_decode_uart_rx_val[i]));
+
+        if (devparms->math_decode_uart_rx) {
+            for (i = 0; i < devparms->math_decode_uart_rx_nval; i++) {
+                painter->fillRect(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                  line_h_uart_rx - 13,
+                                  cell_width,
+                                  26,
+                                  Qt::black);
+
+                painter->drawRect(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                  line_h_uart_rx - 13,
+                                  cell_width,
+                                  26);
             }
-            else if(devparms->math_decode_format == 3)  // binary
-              {
-                QString str;
-                for(j=0; j<devparms->math_decode_uart_width; j++)
-                {
-                  str += ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
-                }
-
-                std::reverse(str.begin(),str.end());
-
-                painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
-              }
-              else if(devparms->math_decode_format == 4)  // line
-                {
-                  QString str;
-                  for(j=0; j<devparms->math_decode_uart_width; j++)
-                  {
-                    str += ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
-                  }
-
-                  painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
-                }
-
-          if(devparms->math_decode_uart_rx_err[i])
-          {
-            painter->setPen(Qt::red);
-
-            painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl + cell_width, line_h_uart_rx - 13, 25, 25, Qt::AlignCenter, "?");
-
-            painter->setPen(Qt::white);
-          }
-      }
-    }
-  }
-
-  if(devparms->math_decode_mode == DECODE_MODE_SPI)
-  {
-    painter->setPen(Qt::green);
-
-    if(devparms->math_decode_spi_width > 24)
-    {
-      spi_chars = 4;
-    }
-    else if(devparms->math_decode_spi_width > 16)
-      {
-        spi_chars = 3;
-      }
-      else if(devparms->math_decode_spi_width > 8)
-        {
-          spi_chars = 2;
-        }
-        else
-        {
-          spi_chars = 1;
         }
 
-    cell_width *= spi_chars;
+        painter->setPen(Qt::white);
 
-    if(devparms->math_decode_spi_mosi && devparms->math_decode_spi_miso)
-    {
-      line_h_spi_mosi = base_line - 5;
-
-      line_h_spi_miso = base_line + 45;
-
-      painter->drawLine(0, line_h_spi_mosi, dw, line_h_spi_mosi);
-
-      painter->drawLine(0, line_h_spi_miso, dw, line_h_spi_miso);
-    }
-    else if(devparms->math_decode_spi_mosi)
-      {
-        line_h_spi_mosi = base_line;
-
-        painter->drawLine(0, line_h_spi_mosi, dw, line_h_spi_mosi);
-      }
-      else if(devparms->math_decode_spi_miso)
-        {
-          line_h_spi_miso = base_line;
-
-          painter->drawLine(0, line_h_spi_miso, dw, line_h_spi_miso);
-        }
-
-    if(devparms->math_decode_spi_mosi)
-    {
-      for(i=0; i<devparms->math_decode_spi_mosi_nval; i++)
-      {
-        cell_width = (devparms->math_decode_spi_mosi_val_pos_end[i] - devparms->math_decode_spi_mosi_val_pos[i]) *
-                      pix_per_smpl;
-
-        painter->fillRect(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 26, Qt::black);
-
-        painter->drawRect(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 26);
-      }
-    }
-
-    if(devparms->math_decode_spi_miso)
-    {
-      for(i=0; i<devparms->math_decode_spi_miso_nval; i++)
-      {
-        cell_width = (devparms->math_decode_spi_miso_val_pos_end[i] - devparms->math_decode_spi_miso_val_pos[i]) *
-                      pix_per_smpl;
-
-        painter->fillRect(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 26, Qt::black);
-
-        painter->drawRect(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 26);
-      }
-    }
-
-    painter->setPen(Qt::white);
-
-    if(devparms->math_decode_spi_mosi)
-    {
-      switch(devparms->math_decode_format)
-      {
-        case 0: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[HEX]");
+        if (devparms->math_decode_uart_tx) {
+            switch (devparms->math_decode_format) {
+            case 0:
+                painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[HEX]");
                 break;
-        case 1: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[ASC]");
-                break;
-        case 2: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[DEC]");
-                break;
-        case 3: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[BIN]");
-                break;
-        case 4: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[LINE]");
-                break;
-        default: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[\?\?\?]");
-                break;
-      }
-
-      for(i=0; i<devparms->math_decode_spi_mosi_nval; i++)
-      {
-        if(devparms->math_decode_format == 0)  // hex
-        {
-          QString str;
-          switch(spi_chars)
-          {
             case 1:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_mosi_val[i],2,16,QLatin1Char('0'));
-              break;
+                painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[ASC]");
+                break;
             case 2:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_mosi_val[i],4,16,QLatin1Char('0'));
-              break;
+                painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[DEC]");
+                break;
             case 3:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_mosi_val[i],6,16,QLatin1Char('0'));
-              break;
+                painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[BIN]");
+                break;
             case 4:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_mosi_val[i],8,16,QLatin1Char('0'));
-              break;
-          }
+                painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[LINE]");
+                break;
+            default:
+                painter->drawText(5, line_h_uart_tx - 35, 65, 30, Qt::AlignCenter, "Tx[\?\?\?]");
+                break;
+            }
 
-          painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
+            for (i = 0; i < devparms->math_decode_uart_tx_nval; i++) {
+                if (devparms->math_decode_format == 0) // hex
+                {
+                    painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_tx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      QString::number(devparms->math_decode_uart_tx_val[i], 16));
+                } else if (devparms->math_decode_format == 1) // ASCII
+                {
+                    painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_tx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      ascii_decode_control_char(
+                                          devparms->math_decode_uart_tx_val[i]));
+                } else if (devparms->math_decode_format == 2) // decimal
+                {
+                    painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_tx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      QString::number(
+                                          (unsigned int) devparms->math_decode_uart_tx_val[i]));
+                } else if (devparms->math_decode_format == 3) // binary
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_uart_width; j++) {
+                        str += ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
+                    }
+
+                    std::reverse(str.begin(), str.end());
+
+                    painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_tx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 4) // line
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_uart_width; j++) {
+                        str += ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
+                    }
+
+                    painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_tx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                }
+
+                if (devparms->math_decode_uart_tx_err[i]) {
+                    painter->setPen(Qt::red);
+
+                    painter->drawText(devparms->math_decode_uart_tx_val_pos[i] * pix_per_smpl
+                                          + cell_width,
+                                      line_h_uart_tx - 13,
+                                      25,
+                                      25,
+                                      Qt::AlignCenter,
+                                      "?");
+
+                    painter->setPen(Qt::white);
+                }
+            }
         }
-        else if(devparms->math_decode_format == 1)  // ASCII
-          {
-            QString str;
-            for(k=0, j=0; k<spi_chars; k++)
-            {
-              str += ascii_decode_control_char(devparms->math_decode_spi_mosi_val[i] >> (k * 8));
-            }
 
-            painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
-          }
-          else if(devparms->math_decode_format == 2)  // decimal
-            {
-              painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter,
-                                QString::number(devparms->math_decode_spi_mosi_val[i]));
-            }
-            else if(devparms->math_decode_format == 3)  // binary
-              {
-                QString str;
-                for(j=0; j<devparms->math_decode_spi_width; j++)
-                {
-                  str += ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
-                }
-
-                std::reverse(str.begin(),str.end());
-
-                painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
-              }
-              else if(devparms->math_decode_format == 4)  // line
-                {
-                  QString str;
-                  for(j=0; j<devparms->math_decode_spi_width; j++)
-                  {
-                    str += ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
-                  }
-
-                  str[devparms->math_decode_spi_width] = 0;
-
-                  painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
-                }
-      }
-    }
-
-    if(devparms->math_decode_spi_miso)
-    {
-      switch(devparms->math_decode_format)
-      {
-        case 0: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[HEX]");
+        if (devparms->math_decode_uart_rx) {
+            switch (devparms->math_decode_format) {
+            case 0:
+                painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[HEX]");
                 break;
-        case 1: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[HEX]");
-                break;
-        case 2: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[DEC]");
-                break;
-        case 3: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[BIN]");
-                break;
-        case 4: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[LINE]");
-                break;
-        default: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[\?\?\?]");
-                break;
-      }
-
-      for(i=0; i<devparms->math_decode_spi_miso_nval; i++)
-      {
-        if(devparms->math_decode_format == 0)  // hex
-        {
-          QString str;
-          switch(spi_chars)
-          {
             case 1:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_miso_val[i],2,16,QLatin1Char('0'));
-              break;
+                painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[ASC]");
+                break;
             case 2:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_miso_val[i],4,16,QLatin1Char('0'));
-              break;
+                painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[DEC]");
+                break;
             case 3:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_miso_val[i],6,16,QLatin1Char('0'));
-              break;
+                painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[BIN]");
+                break;
             case 4:
-              str = QStringLiteral("%1").arg( devparms->math_decode_spi_miso_val[i],8,16,QLatin1Char('0'));
-              break;
-          }
+                painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, "Rx[LINE]");
+                break;
+            default:
+                painter->drawText(5, line_h_uart_rx - 35, 65, 30, Qt::AlignCenter, R"(Rx[???])");
+                break;
+            }
 
-          painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
+            for (i = 0; i < devparms->math_decode_uart_rx_nval; i++) {
+                if (devparms->math_decode_format == 0) // hex
+                {
+                    painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_rx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      QString::number(devparms->math_decode_uart_rx_val[i], 16));
+                } else if (devparms->math_decode_format == 1) // ASCII
+                {
+                    painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_rx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      ascii_decode_control_char(
+                                          devparms->math_decode_uart_rx_val[i]));
+                } else if (devparms->math_decode_format == 2) // decimal
+                {
+                    painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_rx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      QString::number(
+                                          (unsigned int) devparms->math_decode_uart_rx_val[i]));
+                } else if (devparms->math_decode_format == 3) // binary
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_uart_width; j++) {
+                        str += ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
+                    }
+
+                    std::reverse(str.begin(), str.end());
+
+                    painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_rx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 4) // line
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_uart_width; j++) {
+                        str += ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
+                    }
+
+                    painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl,
+                                      line_h_uart_rx - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                }
+
+                if (devparms->math_decode_uart_rx_err[i]) {
+                    painter->setPen(Qt::red);
+
+                    painter->drawText(devparms->math_decode_uart_rx_val_pos[i] * pix_per_smpl
+                                          + cell_width,
+                                      line_h_uart_rx - 13,
+                                      25,
+                                      25,
+                                      Qt::AlignCenter,
+                                      "?");
+
+                    painter->setPen(Qt::white);
+                }
+            }
         }
-        else if(devparms->math_decode_format == 1)  // ASCII
-          {
-            QString str;
-            for(k=0, j=0; k<spi_chars; k++)
-            {
-              str +=  ascii_decode_control_char(devparms->math_decode_spi_miso_val[i] >> (k * 8));
-            }
-
-            painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
-          }
-          else if(devparms->math_decode_format == 2)  // decimal
-            {
-              painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter,
-                                QString::number(devparms->math_decode_spi_miso_val[i]));
-            }
-            else if(devparms->math_decode_format == 3)  // binary
-              {
-                QString str;
-                for(j=0; j<devparms->math_decode_spi_width; j++)
-                {
-                  str += ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
-                }
-
-                std::reverse(str.begin(),str.end());
-
-                painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
-              }
-              else if(devparms->math_decode_format == 4)  // line
-                {
-                  QString str;
-                  for(j=0; j<devparms->math_decode_spi_width; j++)
-                  {
-                    str += ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
-                  }
-
-                  painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
-                }
-      }
     }
-  }
+
+    if (devparms->math_decode_mode == DECODE_MODE_SPI) {
+        painter->setPen(Qt::green);
+
+        if (devparms->math_decode_spi_width > 24) {
+            spi_chars = 4;
+        } else if (devparms->math_decode_spi_width > 16) {
+            spi_chars = 3;
+        } else if (devparms->math_decode_spi_width > 8) {
+            spi_chars = 2;
+        } else {
+            spi_chars = 1;
+        }
+
+        cell_width *= spi_chars;
+
+        if (devparms->math_decode_spi_mosi && devparms->math_decode_spi_miso) {
+            line_h_spi_mosi = base_line - 5;
+
+            line_h_spi_miso = base_line + 45;
+
+            painter->drawLine(0, line_h_spi_mosi, dw, line_h_spi_mosi);
+
+            painter->drawLine(0, line_h_spi_miso, dw, line_h_spi_miso);
+        } else if (devparms->math_decode_spi_mosi) {
+            line_h_spi_mosi = base_line;
+
+            painter->drawLine(0, line_h_spi_mosi, dw, line_h_spi_mosi);
+        } else if (devparms->math_decode_spi_miso) {
+            line_h_spi_miso = base_line;
+
+            painter->drawLine(0, line_h_spi_miso, dw, line_h_spi_miso);
+        }
+
+        if (devparms->math_decode_spi_mosi) {
+            for (i = 0; i < devparms->math_decode_spi_mosi_nval; i++) {
+                cell_width = (devparms->math_decode_spi_mosi_val_pos_end[i]
+                              - devparms->math_decode_spi_mosi_val_pos[i])
+                             * pix_per_smpl;
+
+                painter->fillRect(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                  line_h_spi_mosi - 13,
+                                  cell_width,
+                                  26,
+                                  Qt::black);
+
+                painter->drawRect(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                  line_h_spi_mosi - 13,
+                                  cell_width,
+                                  26);
+            }
+        }
+
+        if (devparms->math_decode_spi_miso) {
+            for (i = 0; i < devparms->math_decode_spi_miso_nval; i++) {
+                cell_width = (devparms->math_decode_spi_miso_val_pos_end[i]
+                              - devparms->math_decode_spi_miso_val_pos[i])
+                             * pix_per_smpl;
+
+                painter->fillRect(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                  line_h_spi_miso - 13,
+                                  cell_width,
+                                  26,
+                                  Qt::black);
+
+                painter->drawRect(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                  line_h_spi_miso - 13,
+                                  cell_width,
+                                  26);
+            }
+        }
+
+        painter->setPen(Qt::white);
+
+        if (devparms->math_decode_spi_mosi) {
+            switch (devparms->math_decode_format) {
+            case 0:
+                painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[HEX]");
+                break;
+            case 1:
+                painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[ASC]");
+                break;
+            case 2:
+                painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[DEC]");
+                break;
+            case 3:
+                painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[BIN]");
+                break;
+            case 4:
+                painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[LINE]");
+                break;
+            default:
+                painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[\?\?\?]");
+                break;
+            }
+
+            for (i = 0; i < devparms->math_decode_spi_mosi_nval; i++) {
+                if (devparms->math_decode_format == 0) // hex
+                {
+                    QString str;
+                    switch (spi_chars) {
+                    case 1:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],
+                                                       2,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    case 2:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],
+                                                       4,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    case 3:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],
+                                                       6,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    case 4:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],
+                                                       8,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    }
+
+                    painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_mosi - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 1) // ASCII
+                {
+                    QString str;
+                    for (k = 0, j = 0; k < spi_chars; k++) {
+                        str += ascii_decode_control_char(devparms->math_decode_spi_mosi_val[i]
+                                                         >> (k * 8));
+                    }
+
+                    painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_mosi - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 2) // decimal
+                {
+                    painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_mosi - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      QString::number(devparms->math_decode_spi_mosi_val[i]));
+                } else if (devparms->math_decode_format == 3) // binary
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_spi_width; j++) {
+                        str += ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
+                    }
+
+                    std::reverse(str.begin(), str.end());
+
+                    painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_mosi - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 4) // line
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_spi_width; j++) {
+                        str += ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
+                    }
+
+                    str[devparms->math_decode_spi_width] = 0;
+
+                    painter->drawText(devparms->math_decode_spi_mosi_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_mosi - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                }
+            }
+        }
+
+        if (devparms->math_decode_spi_miso) {
+            switch (devparms->math_decode_format) {
+            case 0:
+                painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[HEX]");
+                break;
+            case 1:
+                painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[HEX]");
+                break;
+            case 2:
+                painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[DEC]");
+                break;
+            case 3:
+                painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[BIN]");
+                break;
+            case 4:
+                painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[LINE]");
+                break;
+            default:
+                painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[\?\?\?]");
+                break;
+            }
+
+            for (i = 0; i < devparms->math_decode_spi_miso_nval; i++) {
+                if (devparms->math_decode_format == 0) // hex
+                {
+                    QString str;
+                    switch (spi_chars) {
+                    case 1:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],
+                                                       2,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    case 2:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],
+                                                       4,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    case 3:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],
+                                                       6,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    case 4:
+                        str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],
+                                                       8,
+                                                       16,
+                                                       QLatin1Char('0'));
+                        break;
+                    }
+
+                    painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_miso - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 1) // ASCII
+                {
+                    QString str;
+                    for (k = 0, j = 0; k < spi_chars; k++) {
+                        str += ascii_decode_control_char(devparms->math_decode_spi_miso_val[i]
+                                                         >> (k * 8));
+                    }
+
+                    painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_miso - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 2) // decimal
+                {
+                    painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_miso - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      QString::number(devparms->math_decode_spi_miso_val[i]));
+                } else if (devparms->math_decode_format == 3) // binary
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_spi_width; j++) {
+                        str += ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
+                    }
+
+                    std::reverse(str.begin(), str.end());
+
+                    painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_miso - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                } else if (devparms->math_decode_format == 4) // line
+                {
+                    QString str;
+                    for (j = 0; j < devparms->math_decode_spi_width; j++) {
+                        str += ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
+                    }
+
+                    painter->drawText(devparms->math_decode_spi_miso_val_pos[i] * pix_per_smpl,
+                                      line_h_spi_miso - 13,
+                                      cell_width,
+                                      30,
+                                      Qt::AlignCenter,
+                                      str);
+                }
+            }
+        }
+    }
 }
-
 
 QString SignalCurve::ascii_decode_control_char(char ch)
 {
-  if((ch > 32) && (ch < 127))
-  {
-    return QString(ch);
-  }
+    if ((ch > 32) && (ch < 127)) {
+        return QString(ch);
+    }
 
-  switch(ch)
-  {
-    case  0:
-      return "NULL";
-    case  1:
-      return "SOH";
-    case  2:
-      return "STX";
-    case  3:
-      return "ETX";
-    case  4:
-      return "EOT";
-    case  5:
-      return "ENQ";
-    case  6:
-      return "ACK";
-    case  7:
-      return "BEL";
-    case  8:
-      return "BS";
-    case  9:
-      return "HT";
+    switch (ch) {
+    case 0:
+        return "NULL";
+    case 1:
+        return "SOH";
+    case 2:
+        return "STX";
+    case 3:
+        return "ETX";
+    case 4:
+        return "EOT";
+    case 5:
+        return "ENQ";
+    case 6:
+        return "ACK";
+    case 7:
+        return "BEL";
+    case 8:
+        return "BS";
+    case 9:
+        return "HT";
     case 10:
-      return "LF";
+        return "LF";
     case 11:
-      return "VT";
+        return "VT";
     case 12:
-      return "FF";
+        return "FF";
     case 13:
-      return "CR";
+        return "CR";
     case 14:
-      return "SO";
+        return "SO";
     case 15:
-      return "SI";
+        return "SI";
     case 16:
-      return "DLE";
+        return "DLE";
     case 17:
-      return "DC1";
+        return "DC1";
     case 18:
-      return "DC2";
+        return "DC2";
     case 19:
-      return "DC3";
+        return "DC3";
     case 20:
-      return "DC4";
+        return "DC4";
     case 21:
-      return "NAK";
+        return "NAK";
     case 22:
-      return "SYN";
+        return "SYN";
     case 23:
-      return "ETB";
+        return "ETB";
     case 24:
-      return "CAN";
+        return "CAN";
     case 25:
-      return "EM";
+        return "EM";
     case 26:
-      return "SUB";
+        return "SUB";
     case 27:
-      return "ESC";
+        return "ESC";
     case 28:
-      return "FS";
+        return "FS";
     case 29:
-      return "GS";
+        return "GS";
     case 30:
-      return "RS";
+        return "RS";
     case 31:
-      return "US";
+        return "US";
     case 32:
-      return "SP";
+        return "SP";
     case 127:
-      return "DEL";
-  }
+        return "DEL";
+    }
 
-  return ".";
+    return ".";
 }
-
-
-
-
-
-
-
-
-
-
-
-

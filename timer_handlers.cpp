@@ -25,196 +25,153 @@
 ***************************************************************************
 */
 
-
 #include <QtCore>
-
 
 void UI_Mainwindow::test_timer_handler()
 {
-  qDebug() << "scr_update_cntr is: " << waveForm->scr_update_cntr;
+    qDebug() << "scr_update_cntr is: " << waveForm->scr_update_cntr;
 
-  waveForm->scr_update_cntr = 0;
+    waveForm->scr_update_cntr = 0;
 }
-
 
 void UI_Mainwindow::label_timer_handler()
 {
-  waveForm->label_active = LABEL_ACTIVE_NONE;
+    waveForm->label_active = LABEL_ACTIVE_NONE;
 }
-
 
 void UI_Mainwindow::navDial_timer_handler()
 {
-  if(navDial->isSliderDown())
-  {
-    navDialChanged(navDial->value());
-  }
-  else
-  {
-    navDial->setSliderPosition(50);
+    if (navDial->isSliderDown()) {
+        navDialChanged(navDial->value());
+    } else {
+        navDial->setSliderPosition(50);
 
-    navDialFunc = NAV_DIAL_FUNC_NONE;
+        navDialFunc = NAV_DIAL_FUNC_NONE;
 
-    if(!adjdial_timer->isActive())
-    {
-      adjDialFunc = ADJ_DIAL_FUNC_NONE;
+        if (!adjdial_timer->isActive()) {
+            adjDialFunc = ADJ_DIAL_FUNC_NONE;
+        }
     }
-  }
 }
-
 
 void UI_Mainwindow::adjdial_timer_handler()
 {
-  adjdial_timer->stop();
+    adjdial_timer->stop();
 
-  adjDialLabel->setStyleSheet(def_stylesh);
+    adjDialLabel->setStyleSheet(def_stylesh);
 
-  adjDialLabel->setStyleSheet("font: 7pt;");
+    adjDialLabel->setStyleSheet("font: 7pt;");
 
-  adjDialLabel->setText("");
+    adjDialLabel->setText("");
 
-  if(adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF)
-  {
-    statusLabel->setText(QString("Trigger holdoff: %1s").arg(suffixed_metric_value(devparms.triggerholdoff, 2)));
+    if (adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF) {
+        statusLabel->setText(
+            QString("Trigger holdoff: %1s").arg(suffixed_metric_value(devparms.triggerholdoff, 2)));
 
-    set_cue_cmd(QString(":TRIG:HOLD %1").arg(devparms.triggerholdoff).toLocal8Bit().constData());
+        set_cue_cmd(QString(":TRIG:HOLD %1").arg(devparms.triggerholdoff).toLocal8Bit().constData());
 
-    if((devparms.modelserie == 2) || (devparms.modelserie == 6))
-    {
-      usleep(20000);
+        if ((devparms.modelserie == 2) || (devparms.modelserie == 6)) {
+            usleep(20000);
 
-      set_cue_cmd(":DISP:CLE");
-    }
-    else
-    {
-      usleep(20000);
+            set_cue_cmd(":DISP:CLE");
+        } else {
+            usleep(20000);
 
-      set_cue_cmd(":CLE");
-    }
-  }
-  else if(adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG)
-    {
-      statusLabel->setText(QString("Acquire averages: %1").arg(devparms.acquireaverages));
+            set_cue_cmd(":CLE");
+        }
+    } else if (adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG) {
+        statusLabel->setText(QString("Acquire averages: %1").arg(devparms.acquireaverages));
 
-      set_cue_cmd(QString(":ACQ:AVER %1").arg(devparms.acquireaverages).toLocal8Bit().constData());
+        set_cue_cmd(QString(":ACQ:AVER %1").arg(devparms.acquireaverages).toLocal8Bit().constData());
     }
 
-  adjDialFunc = ADJ_DIAL_FUNC_NONE;
+    adjDialFunc = ADJ_DIAL_FUNC_NONE;
 
-  if(navDial_timer->isActive() == false)
-  {
-    navDialFunc = NAV_DIAL_FUNC_NONE;
-  }
+    if (navDial_timer->isActive() == false) {
+        navDialFunc = NAV_DIAL_FUNC_NONE;
+    }
 }
-
 
 void UI_Mainwindow::scrn_timer_handler()
 {
-  if(pthread_mutex_trylock(&devparms.mutexx))
-  {
-    return;
-  }
+    if (pthread_mutex_trylock(&devparms.mutexx)) {
+        return;
+    }
 
-  scrn_thread->set_params(&devparms);
+    scrn_thread->set_params(&devparms);
 
-  scrn_thread->start();
+    scrn_thread->start();
 }
-
 
 void UI_Mainwindow::horPosDial_timer_handler()
 {
+    QString str;
+    if (devparms.timebasedelayenable) {
+        str = QString(":TIM:DEL:OFFS %1").arg(devparms.timebasedelayoffset);
+    } else {
+        str = QString(":TIM:OFFS %1").arg(devparms.timebaseoffset);
+    }
 
-  QString str;
-  if(devparms.timebasedelayenable)
-  {
-    str = QString(":TIM:DEL:OFFS %1").arg(devparms.timebasedelayoffset);
-  }
-  else
-  {
-    str = QString(":TIM:OFFS %1").arg(devparms.timebaseoffset);
-  }
-
-  set_cue_cmd(str.toLocal8Bit().constData());
+    set_cue_cmd(str.toLocal8Bit().constData());
 }
-
 
 void UI_Mainwindow::trigAdjDial_timer_handler()
 {
-  int chn;
+    int chn;
 
-  chn = devparms.triggeredgesource;
+    chn = devparms.triggeredgesource;
 
-  if((chn < 0) || (chn > 3))
-  {
-    return;
-  }
+    if ((chn < 0) || (chn > 3)) {
+        return;
+    }
 
-  set_cue_cmd(QString(":TRIG:EDG:LEV %1").arg(devparms.triggeredgelevel[chn]).toLocal8Bit().constData());
+    set_cue_cmd(
+        QString(":TRIG:EDG:LEV %1").arg(devparms.triggeredgelevel[chn]).toLocal8Bit().constData());
 }
-
 
 void UI_Mainwindow::vertOffsDial_timer_handler()
 {
-  int chn;
+    int chn;
 
-  if(devparms.activechannel < 0)
-  {
-    return;
-  }
+    if (devparms.activechannel < 0) {
+        return;
+    }
 
-  chn = devparms.activechannel;
+    chn = devparms.activechannel;
 
-  set_cue_cmd(QString(":CHAN%1:OFFS %2").arg(chn+1).arg(devparms.chanoffset[chn]).toLocal8Bit().constData());
+    set_cue_cmd(QString(":CHAN%1:OFFS %2")
+                    .arg(chn + 1)
+                    .arg(devparms.chanoffset[chn])
+                    .toLocal8Bit()
+                    .constData());
 }
-
 
 void UI_Mainwindow::horScaleDial_timer_handler()
 {
-  QString str;
+    QString str;
 
-  if(devparms.timebasedelayenable)
-  {
-    str = QString(":TIM:DEL:SCAL %1").arg(devparms.timebasedelayscale);
-  }
-  else
-  {
-    str = QString(":TIM:SCAL %1").arg(devparms.timebasescale);
-  }
+    if (devparms.timebasedelayenable) {
+        str = QString(":TIM:DEL:SCAL %1").arg(devparms.timebasedelayscale);
+    } else {
+        str = QString(":TIM:SCAL %1").arg(devparms.timebasescale);
+    }
 
-  set_cue_cmd(str.toLocal8Bit().constData());
+    set_cue_cmd(str.toLocal8Bit().constData());
 }
-
 
 void UI_Mainwindow::vertScaleDial_timer_handler()
 {
-  int chn;
+    int chn;
 
-  if(devparms.activechannel < 0)
-  {
-    return;
-  }
+    if (devparms.activechannel < 0) {
+        return;
+    }
 
-  chn = devparms.activechannel;
+    chn = devparms.activechannel;
 
-  set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().constData());
+    set_cue_cmd(QString(":CHAN%1:SCAL %2")
+                    .arg(chn + 1)
+                    .arg(devparms.chanscale[chn])
+                    .toLocal8Bit()
+                    .constData());
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

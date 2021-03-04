@@ -25,44 +25,35 @@
 ***************************************************************************
 */
 
-
-
-
-
 #ifndef TLED_H
 #define TLED_H
 
-#include <QWidget>
 #include <QPainter>
+#include <QWidget>
 
-
-
-class TLed: public QWidget
+class TLed : public QWidget
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  TLed(QWidget *parent=0);
+    TLed(QWidget *parent = 0);
 
-  bool getValue() const { return value; }
-  QColor getOnColor() const {return OnColor; }
-  QColor getOffColor() const {return OffColor; }
-  QSize sizeHint() const {return minimumSizeHint(); }
-  QSize minimumSizeHint() const {return QSize(20,20); }
+    bool getValue() const { return value; }
+    QColor getOnColor() const { return OnColor; }
+    QColor getOffColor() const { return OffColor; }
+    QSize sizeHint() const { return minimumSizeHint(); }
+    QSize minimumSizeHint() const { return QSize(20, 20); }
 
 public slots:
-  void setValue(bool);
-  void setOnColor(QColor);
-  void setOffColor(QColor);
+    void setValue(bool);
+    void setOnColor(QColor);
+    void setOffColor(QColor);
 
 protected:
-  void paintEvent(QPaintEvent *);
-  QColor OnColor,OffColor;
-  bool value;
-  void drawLed(QPainter *painter);
+    void paintEvent(QPaintEvent *);
+    QColor OnColor, OffColor;
+    bool value;
+    void drawLed(QPainter *painter);
 };
 
-
 #endif
-
-

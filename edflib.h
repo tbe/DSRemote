@@ -31,22 +31,15 @@
 *****************************************************************************
 */
 
-
-
 /* compile with options "-D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE" */
-
-
 
 #ifndef EDFLIB_INCLUDED
 #define EDFLIB_INCLUDED
-
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-
 
 #define EDFLIB_TIME_DIMENSION (10000000LL)
 #define EDFLIB_MAXSIGNALS 640
@@ -56,52 +49,45 @@
 #define EDFSEEK_CUR 1
 #define EDFSEEK_END 2
 
-
-
 /* the following defines are used in the member "filetype" of the edf_hdr_struct */
 /* and as return value for the function edfopen_file_readonly() */
-#define EDFLIB_FILETYPE_EDF                  0
-#define EDFLIB_FILETYPE_EDFPLUS              1
-#define EDFLIB_FILETYPE_BDF                  2
-#define EDFLIB_FILETYPE_BDFPLUS              3
-#define EDFLIB_MALLOC_ERROR                 -1
-#define EDFLIB_NO_SUCH_FILE_OR_DIRECTORY    -2
+#define EDFLIB_FILETYPE_EDF 0
+#define EDFLIB_FILETYPE_EDFPLUS 1
+#define EDFLIB_FILETYPE_BDF 2
+#define EDFLIB_FILETYPE_BDFPLUS 3
+#define EDFLIB_MALLOC_ERROR -1
+#define EDFLIB_NO_SUCH_FILE_OR_DIRECTORY -2
 
 /* when this error occurs, try to open the file with EDFbrowser,
    it will give you full details about the cause of the error. */
-#define EDFLIB_FILE_CONTAINS_FORMAT_ERRORS  -3
+#define EDFLIB_FILE_CONTAINS_FORMAT_ERRORS -3
 
-#define EDFLIB_MAXFILES_REACHED             -4
-#define EDFLIB_FILE_READ_ERROR              -5
-#define EDFLIB_FILE_ALREADY_OPENED          -6
-#define EDFLIB_FILETYPE_ERROR               -7
-#define EDFLIB_FILE_WRITE_ERROR             -8
-#define EDFLIB_NUMBER_OF_SIGNALS_INVALID    -9
-#define EDFLIB_FILE_IS_DISCONTINUOUS       -10
-#define EDFLIB_INVALID_READ_ANNOTS_VALUE   -11
+#define EDFLIB_MAXFILES_REACHED -4
+#define EDFLIB_FILE_READ_ERROR -5
+#define EDFLIB_FILE_ALREADY_OPENED -6
+#define EDFLIB_FILETYPE_ERROR -7
+#define EDFLIB_FILE_WRITE_ERROR -8
+#define EDFLIB_NUMBER_OF_SIGNALS_INVALID -9
+#define EDFLIB_FILE_IS_DISCONTINUOUS -10
+#define EDFLIB_INVALID_READ_ANNOTS_VALUE -11
 
 /* values for annotations */
 #define EDFLIB_DO_NOT_READ_ANNOTATIONS 0
-#define EDFLIB_READ_ANNOTATIONS        1
-#define EDFLIB_READ_ALL_ANNOTATIONS    2
+#define EDFLIB_READ_ANNOTATIONS 1
+#define EDFLIB_READ_ALL_ANNOTATIONS 2
 
 /* the following defines are possible errors returned by the first sample write action */
-#define EDFLIB_NO_SIGNALS                  -20
-#define EDFLIB_TOO_MANY_SIGNALS            -21
-#define EDFLIB_NO_SAMPLES_IN_RECORD        -22
-#define EDFLIB_DIGMIN_IS_DIGMAX            -23
-#define EDFLIB_DIGMAX_LOWER_THAN_DIGMIN    -24
-#define EDFLIB_PHYSMIN_IS_PHYSMAX          -25
-#define EDFLIB_DATARECORD_SIZE_TOO_BIG     -26
-
-
-
+#define EDFLIB_NO_SIGNALS -20
+#define EDFLIB_TOO_MANY_SIGNALS -21
+#define EDFLIB_NO_SAMPLES_IN_RECORD -22
+#define EDFLIB_DIGMIN_IS_DIGMAX -23
+#define EDFLIB_DIGMAX_LOWER_THAN_DIGMIN -24
+#define EDFLIB_PHYSMIN_IS_PHYSMAX -25
+#define EDFLIB_DATARECORD_SIZE_TOO_BIG -26
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
 
 /* For more info about the EDF and EDF+ format, visit: http://edfplus.info/specs/ */
 
@@ -140,59 +126,60 @@ extern "C" {
  *
  */
 
+struct edf_param_struct
+{ /* this structure contains all the relevant EDF-signal parameters of one signal */
+    char label[17];        /* label (name) of the signal, null-terminated string */
+    long long smp_in_file; /* number of samples of this signal in the file */
+    double phys_max;       /* physical maximum, usually the maximum input of the ADC */
+    double phys_min;       /* physical minimum, usually the minimum input of the ADC */
+    int dig_max; /* digital maximum, usually the maximum output of the ADC, can not not be higher than 32767 for EDF or 8388607 for BDF */
+    int dig_min; /* digital minimum, usually the minimum output of the ADC, can not not be lower than -32768 for EDF or -8388608 for BDF */
+    int smp_in_datarecord; /* number of samples of this signal in a datarecord, if the datarecord has a duration of one second (default), then it equals the samplerate */
+    char physdimension[9]; /* physical dimension (uV, bpm, mA, etc.), null-terminated string */
+    char prefilter[81];    /* null-terminated string */
+    char transducer[81];   /* null-terminated string */
+};
 
-struct edf_param_struct{         /* this structure contains all the relevant EDF-signal parameters of one signal */
-  char   label[17];              /* label (name) of the signal, null-terminated string */
-  long long smp_in_file;         /* number of samples of this signal in the file */
-  double phys_max;               /* physical maximum, usually the maximum input of the ADC */
-  double phys_min;               /* physical minimum, usually the minimum input of the ADC */
-  int    dig_max;                /* digital maximum, usually the maximum output of the ADC, can not not be higher than 32767 for EDF or 8388607 for BDF */
-  int    dig_min;                /* digital minimum, usually the minimum output of the ADC, can not not be lower than -32768 for EDF or -8388608 for BDF */
-  int    smp_in_datarecord;      /* number of samples of this signal in a datarecord, if the datarecord has a duration of one second (default), then it equals the samplerate */
-  char   physdimension[9];       /* physical dimension (uV, bpm, mA, etc.), null-terminated string */
-  char   prefilter[81];          /* null-terminated string */
-  char   transducer[81];         /* null-terminated string */
-      };
+struct edf_annotation_struct
+{ /* this structure is used for annotations */
+    long long
+        onset; /* onset time of the event, expressed in units of 100 nanoSeconds and relative to the starttime in the header */
+    char duration[16]; /* duration time, this is a null-terminated ASCII text-string */
+    char annotation[EDFLIB_MAX_ANNOTATION_LEN
+                    + 1]; /* description of the event in UTF-8, this is a null terminated string */
+};
 
-
-struct edf_annotation_struct{                           /* this structure is used for annotations */
-        long long onset;                                /* onset time of the event, expressed in units of 100 nanoSeconds and relative to the starttime in the header */
-        char duration[16];                              /* duration time, this is a null-terminated ASCII text-string */
-        char annotation[EDFLIB_MAX_ANNOTATION_LEN + 1]; /* description of the event in UTF-8, this is a null terminated string */
-       };
-
-
-struct edf_hdr_struct{                     /* this structure contains all the relevant EDF header info and will be filled when calling the function edf_open_file_readonly() */
-  int       handle;                        /* a handle (identifier) used to distinguish the different files */
-  int       filetype;                      /* 0: EDF, 1: EDFplus, 2: BDF, 3: BDFplus, a negative number means an error */
-  int       edfsignals;                    /* number of EDF signals in the file, annotation channels are NOT included */
-  long long file_duration;                 /* duration of the file expressed in units of 100 nanoSeconds */
-  int       startdate_day;
-  int       startdate_month;
-  int       startdate_year;
-  long long starttime_subsecond;                          /* starttime offset expressed in units of 100 nanoSeconds. Is always less than 10000000 (one second). Only used by EDFplus and BDFplus */
-  int       starttime_second;
-  int       starttime_minute;
-  int       starttime_hour;
-  char      patient[81];                                  /* null-terminated string, contains patientfield of header, is always empty when filetype is EDFPLUS or BDFPLUS */
-  char      recording[81];                                /* null-terminated string, contains recordingfield of header, is always empty when filetype is EDFPLUS or BDFPLUS */
-  char      patientcode[81];                              /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      gender[16];                                   /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      birthdate[16];                                /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      patient_name[81];                             /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      patient_additional[81];                       /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      admincode[81];                                /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      technician[81];                               /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      equipment[81];                                /* null-terminated string, is always empty when filetype is EDF or BDF */
-  char      recording_additional[81];                     /* null-terminated string, is always empty when filetype is EDF or BDF */
-  long long datarecord_duration;                          /* duration of a datarecord expressed in units of 100 nanoSeconds */
-  long long datarecords_in_file;                          /* number of datarecords in the file */
-  long long annotations_in_file;                          /* number of annotations in the file */
-  struct edf_param_struct signalparam[EDFLIB_MAXSIGNALS]; /* array of structs which contain the relevant signal parameters */
-       };
-
-
-
+struct edf_hdr_struct
+{ /* this structure contains all the relevant EDF header info and will be filled when calling the function edf_open_file_readonly() */
+    int handle;     /* a handle (identifier) used to distinguish the different files */
+    int filetype;   /* 0: EDF, 1: EDFplus, 2: BDF, 3: BDFplus, a negative number means an error */
+    int edfsignals; /* number of EDF signals in the file, annotation channels are NOT included */
+    long long file_duration; /* duration of the file expressed in units of 100 nanoSeconds */
+    int startdate_day;
+    int startdate_month;
+    int startdate_year;
+    long long
+        starttime_subsecond; /* starttime offset expressed in units of 100 nanoSeconds. Is always less than 10000000 (one second). Only used by EDFplus and BDFplus */
+    int starttime_second;
+    int starttime_minute;
+    int starttime_hour;
+    char patient[81]; /* null-terminated string, contains patientfield of header, is always empty when filetype is EDFPLUS or BDFPLUS */
+    char recording[81]; /* null-terminated string, contains recordingfield of header, is always empty when filetype is EDFPLUS or BDFPLUS */
+    char patientcode[81];  /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char gender[16];       /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char birthdate[16];    /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char patient_name[81]; /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char patient_additional[81]; /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char admincode[81];  /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char technician[81]; /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char equipment[81];  /* null-terminated string, is always empty when filetype is EDF or BDF */
+    char recording_additional[81]; /* null-terminated string, is always empty when filetype is EDF or BDF */
+    long long datarecord_duration; /* duration of a datarecord expressed in units of 100 nanoSeconds */
+    long long datarecords_in_file; /* number of datarecords in the file */
+    long long annotations_in_file; /* number of annotations in the file */
+    struct edf_param_struct signalparam
+        [EDFLIB_MAXSIGNALS]; /* array of structs which contain the relevant signal parameters */
+};
 
 /*****************  the following functions are used to read files **************************/
 
@@ -212,8 +199,6 @@ int edfopen_file_readonly(const char *path, struct edf_hdr_struct *edfhdr, int r
 /* returns 0 on success, in case of an error it returns -1 and an errorcode will be set in the member "filetype" of struct edf_hdr_struct */
 /* This function is required if you want to read a file */
 
-
-
 int edfread_physical_samples(int handle, int edfsignal, int n, double *buf);
 
 /* reads n samples from edfsignal, starting from the current sample position indicator, into buf (edfsignal starts at 0) */
@@ -222,7 +207,6 @@ int edfread_physical_samples(int handle, int edfsignal, int n, double *buf);
 /* the sample position indicator will be increased with the amount of samples read */
 /* returns the amount of samples read (this can be less than n or zero!) */
 /* or -1 in case of an error */
-
 
 int edfread_digital_samples(int handle, int edfsignal, int n, int *buf);
 
@@ -233,7 +217,6 @@ int edfread_digital_samples(int handle, int edfsignal, int n, int *buf);
 /* returns the amount of samples read (this can be less than n or zero!) */
 /* or -1 in case of an error */
 
-
 long long edfseek(int handle, int edfsignal, long long offset, int whence);
 
 /* The edfseek() function sets the sample position indicator for the edfsignal pointed to by edfsignal. */
@@ -243,20 +226,17 @@ long long edfseek(int handle, int edfsignal, long long offset, int whence);
 /* Returns the current offset. Otherwise, -1 is returned. */
 /* note that every signal has it's own independent sample position indicator and edfseek() affects only one of them */
 
-
 long long edftell(int handle, int edfsignal);
 
 /* The edftell() function obtains the current value of the sample position indicator for the edfsignal pointed to by edfsignal. */
 /* Returns the current offset. Otherwise, -1 is returned */
 /* note that every signal has it's own independent sample position indicator and edftell() affects only one of them */
 
-
 void edfrewind(int handle, int edfsignal);
 
 /* The edfrewind() function sets the sample position indicator for the edfsignal pointed to by edfsignal to the beginning of the file. */
 /* It is equivalent to: (void) edfseek(int handle, int edfsignal, 0LL, EDFSEEK_SET) */
 /* note that every signal has it's own independent sample position indicator and edfrewind() affects only one of them */
-
 
 int edf_get_annotation(int handle, int n, struct edf_annotation_struct *annot);
 
@@ -301,22 +281,18 @@ int edfclose_file(int handle);
 /* This function is required after reading or writing. Failing to do so will cause */
 /* unnessecary memory usage and in case of writing it will cause a corrupted and incomplete file */
 
-
 int edflib_version(void);
 
 /* Returns the version number of this library, multiplied by hundred. if version is "1.00" than it will return 100 */
-
 
 int edflib_is_file_used(const char *path);
 
 /* returns 1 if the file is used, either for reading or writing */
 /* otherwise returns 0 */
 
-
 int edflib_get_number_of_open_files(void);
 
 /* returns the number of open files, either for reading or writing */
-
 
 int edflib_get_handle(int file_number);
 
@@ -324,9 +300,7 @@ int edflib_get_handle(int file_number);
 /* file_number starts with 0 */
 /* returns -1 if the file is not opened */
 
-
 /*****************  the following functions are used to write files **************************/
-
 
 int edfopen_file_writeonly(const char *path, int filetype, int number_of_signals);
 
@@ -342,7 +316,6 @@ int edfopen_file_writeonly(const char *path, int filetype, int number_of_signals
 /* EDFLIB_NUMBER_OF_SIGNALS_INVALID   */
 /* This function is required if you want to write a file */
 
-
 int edf_set_samplefrequency(int handle, int edfsignal, int samplefrequency);
 
 /* Sets the samplefrequency of signal edfsignal. (In reallity, it sets the number of samples in a datarecord.) */
@@ -350,14 +323,12 @@ int edf_set_samplefrequency(int handle, int edfsignal, int samplefrequency);
 /* This function is required for every signal and can be called only after opening a */
 /* file in writemode and before the first sample write action */
 
-
 int edf_set_physical_maximum(int handle, int edfsignal, double phys_max);
 
 /* Sets the maximum physical value of signal edfsignal. (the value of the input of the ADC when the output equals the value of "digital maximum") */
 /* Returns 0 on success, otherwise -1 */
 /* This function is required for every signal and can be called only after opening a */
 /* file in writemode and before the first sample write action */
-
 
 int edf_set_physical_minimum(int handle, int edfsignal, double phys_min);
 
@@ -367,7 +338,6 @@ int edf_set_physical_minimum(int handle, int edfsignal, double phys_min);
 /* This function is required for every signal and can be called only after opening a */
 /* file in writemode and before the first sample write action */
 
-
 int edf_set_digital_maximum(int handle, int edfsignal, int dig_max);
 
 /* Sets the maximum digital value of signal edfsignal. The maximum value is 32767 for EDF+ and 8388607 for BDF+ */
@@ -375,7 +345,6 @@ int edf_set_digital_maximum(int handle, int edfsignal, int dig_max);
 /* Returns 0 on success, otherwise -1 */
 /* This function is required for every signal and can be called only after opening a file in writemode */
 /* and before the first sample write action */
-
 
 int edf_set_digital_minimum(int handle, int edfsignal, int dig_min);
 
@@ -386,7 +355,6 @@ int edf_set_digital_minimum(int handle, int edfsignal, int dig_min);
 /* This function is required for every signal and can be called only after opening a file in writemode */
 /* and before the first sample write action */
 
-
 int edf_set_label(int handle, int edfsignal, const char *label);
 
 /* Sets the label (name) of signal edfsignal. ("FP1", "SaO2", etc.) */
@@ -394,7 +362,6 @@ int edf_set_label(int handle, int edfsignal, const char *label);
 /* Returns 0 on success, otherwise -1 */
 /* This function is recommended for every signal when you want to write a file */
 /* and can be called only after opening a file in writemode and before the first sample write action */
-
 
 int edf_set_prefilter(int handle, int edfsignal, const char *prefilter);
 
@@ -404,7 +371,6 @@ int edf_set_prefilter(int handle, int edfsignal, const char *prefilter);
 /* This function is optional and can be called only after opening a file in writemode and before */
 /* the first sample write action */
 
-
 int edf_set_transducer(int handle, int edfsignal, const char *transducer);
 
 /* Sets the transducer of signal edfsignal ("AgAgCl cup electrodes", etc.). */
@@ -412,7 +378,6 @@ int edf_set_transducer(int handle, int edfsignal, const char *transducer);
 /* Returns 0 on success, otherwise -1 */
 /* This function is optional and can be called only after opening a file in writemode and before */
 /* the first sample write action */
-
 
 int edf_set_physical_dimension(int handle, int edfsignal, const char *phys_dim);
 
@@ -422,9 +387,13 @@ int edf_set_physical_dimension(int handle, int edfsignal, const char *phys_dim);
 /* This function is recommanded for every signal when you want to write a file */
 /* and can be called only after opening a file in writemode and before the first sample write action */
 
-
-int edf_set_startdatetime(int handle, int startdate_year, int startdate_month, int startdate_day,
-                                      int starttime_hour, int starttime_minute, int starttime_second);
+int edf_set_startdatetime(int handle,
+                          int startdate_year,
+                          int startdate_month,
+                          int startdate_day,
+                          int starttime_hour,
+                          int starttime_minute,
+                          int starttime_second);
 
 /* Sets the startdate and starttime. */
 /* year: 1970 - 3000, month: 1 - 12, day: 1 - 31 */
@@ -434,14 +403,12 @@ int edf_set_startdatetime(int handle, int startdate_year, int startdate_month, i
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
 
-
 int edf_set_patientname(int handle, const char *patientname);
 
 /* Sets the patientname. patientname is a pointer to a null-terminated ASCII-string. */
 /* Returns 0 on success, otherwise -1 */
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
-
 
 int edf_set_patientcode(int handle, const char *patientcode);
 
@@ -450,15 +417,12 @@ int edf_set_patientcode(int handle, const char *patientcode);
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
 
-
 int edf_set_gender(int handle, int gender);
 
 /* Sets the gender. 1 is male, 0 is female. */
 /* Returns 0 on success, otherwise -1 */
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
-
-
 
 int edf_set_birthdate(int handle, int birthdate_year, int birthdate_month, int birthdate_day);
 
@@ -469,14 +433,12 @@ int edf_set_birthdate(int handle, int birthdate_year, int birthdate_month, int b
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
 
-
 int edf_set_patient_additional(int handle, const char *patient_additional);
 
 /* Sets the additional patientinfo. patient_additional is a pointer to a null-terminated ASCII-string. */
 /* Returns 0 on success, otherwise -1 */
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
-
 
 int edf_set_admincode(int handle, const char *admincode);
 
@@ -485,14 +447,12 @@ int edf_set_admincode(int handle, const char *admincode);
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
 
-
 int edf_set_technician(int handle, const char *technician);
 
 /* Sets the technicians name. technician is a pointer to a null-terminated ASCII-string. */
 /* Returns 0 on success, otherwise -1 */
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
-
 
 int edf_set_equipment(int handle, const char *equipment);
 
@@ -501,14 +461,12 @@ int edf_set_equipment(int handle, const char *equipment);
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
 
-
 int edf_set_recording_additional(int handle, const char *recording_additional);
 
 /* Sets the additional recordinginfo. recording_additional is a pointer to a null-terminated ASCII-string. */
 /* Returns 0 on success, otherwise -1 */
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before the first sample write action */
-
 
 int edfwrite_physical_samples(int handle, double *buf);
 
@@ -523,7 +481,6 @@ int edfwrite_physical_samples(int handle, double *buf);
 /* must be: signal 0, signal 1, signal 2, signal 3, signal 0, signal 1, signal 2, etc. */
 /* Returns 0 on success, otherwise -1 */
 
-
 int edf_blockwrite_physical_samples(int handle, double *buf);
 
 /* Writes physical samples (uV, mA, Ohm) from *buf */
@@ -536,7 +493,6 @@ int edf_blockwrite_physical_samples(int handle, double *buf);
 /* The number of samples written is equal to the sum of the samplefrequencies of all signals */
 /* Size of buf should be equal to or bigger than sizeof(double) multiplied by the sum of the samplefrequencies of all signals */
 /* Returns 0 on success, otherwise -1 */
-
 
 int edfwrite_digital_short_samples(int handle, short *buf);
 
@@ -551,7 +507,6 @@ int edfwrite_digital_short_samples(int handle, short *buf);
 /* must be: signal 0, signal 1, signal 2, signal 3, signal 0, signal 1, signal 2, etc. */
 /* Returns 0 on success, otherwise -1 */
 
-
 int edfwrite_digital_samples(int handle, int *buf);
 
 /* Writes n "raw" digital samples from *buf belonging to one signal */
@@ -564,7 +519,6 @@ int edfwrite_digital_samples(int handle, int *buf);
 /* When there are 4 signals in the file,  the order of calling this function */
 /* must be: signal 0, signal 1, signal 2, signal 3, signal 0, signal 1, signal 2, etc. */
 /* Returns 0 on success, otherwise -1 */
-
 
 int edf_blockwrite_digital_3byte_samples(int handle, void *buf);
 
@@ -579,7 +533,6 @@ int edf_blockwrite_digital_3byte_samples(int handle, void *buf);
 /* Size of buf should be equal to or bigger than: the sum of the samplefrequencies of all signals x 3 bytes */
 /* Returns 0 on success, otherwise -1 */
 
-
 int edf_blockwrite_digital_short_samples(int handle, short *buf);
 
 /* Writes "raw" digital samples from *buf. */
@@ -591,7 +544,6 @@ int edf_blockwrite_digital_short_samples(int handle, short *buf);
 /* The number of samples written is equal to the sum of the samplefrequencies of all signals. */
 /* Size of buf should be equal to or bigger than sizeof(short) multiplied by the sum of the samplefrequencies of all signals */
 /* Returns 0 on success, otherwise -1 */
-
 
 int edf_blockwrite_digital_samples(int handle, int *buf);
 
@@ -605,8 +557,10 @@ int edf_blockwrite_digital_samples(int handle, int *buf);
 /* Size of buf should be equal to or bigger than sizeof(int) multiplied by the sum of the samplefrequencies of all signals */
 /* Returns 0 on success, otherwise -1 */
 
-
-int edfwrite_annotation_utf8(int handle, long long onset, long long duration, const char *description);
+int edfwrite_annotation_utf8(int handle,
+                             long long onset,
+                             long long duration,
+                             const char *description);
 
 /* writes an annotation/event to the file */
 /* onset is relative to the starttime and startdate of the file */
@@ -617,8 +571,10 @@ int edfwrite_annotation_utf8(int handle, long long onset, long long duration, co
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before closing the file */
 
-
-int edfwrite_annotation_latin1(int handle, long long onset, long long duration, const char *description);
+int edfwrite_annotation_latin1(int handle,
+                               long long onset,
+                               long long duration,
+                               const char *description);
 
 /* writes an annotation/event to the file */
 /* onset is relative to the starttime and startdate of the file */
@@ -628,7 +584,6 @@ int edfwrite_annotation_latin1(int handle, long long onset, long long duration, 
 /* description is a null-terminated Latin1-string containing the text that describes the event */
 /* This function is optional and can be called only after opening a file in writemode */
 /* and before closing the file */
-
 
 int edf_set_datarecord_duration(int handle, int duration);
 
@@ -647,7 +602,6 @@ int edf_set_datarecord_duration(int handle, int duration);
 /* or set the samplefrequency to 1 Hz and the datarecord duration to 2 seconds. */
 /* Do not use this function if not necessary. */
 
-
 int edf_set_micro_datarecord_duration(int handle, int duration);
 
 /* Sets the datarecord duration to a very small value. */
@@ -663,7 +617,6 @@ int edf_set_micro_datarecord_duration(int handle, int duration);
 /* Do not use this function if not necessary. */
 /* This function was added to accommodate for high speed ADC's e.g. Digital Sampling Oscilloscopes */
 
-
 int edf_set_number_of_annotation_signals(int handle, int annot_signals);
 
 /* Sets the number of annotation signals. The default value is 1 */
@@ -675,15 +628,8 @@ int edf_set_number_of_annotation_signals(int handle, int annot_signals);
 /* Minimum is 1, maximum is 64 */
 /* Returns 0 on success, otherwise -1 */
 
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
 
 #endif
-
-
-
-
-
-

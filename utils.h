@@ -25,17 +25,14 @@
 ***************************************************************************
 */
 
-
-
 #ifndef UTILS_INCLUDED
 #define UTILS_INCLUDED
 
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 #include <QString>
@@ -50,9 +47,13 @@ void remove_trailing_spaces(char *);
 void remove_leading_spaces(char *);
 void remove_trailing_zeros(char *);
 void convert_trailing_zeros_to_spaces(char *);
-void remove_extension_from_filename(char *);  /* removes extension including the dot */
-int get_filename_from_path(char *dest, const char *src, int size);  /* size is size of destination, returns length of filename */
-int get_directory_from_path(char *dest, const char *src, int size);  /* size is size of destination, returns length of directory */
+void remove_extension_from_filename(char *); /* removes extension including the dot */
+int get_filename_from_path(char *dest,
+                           const char *src,
+                           int size); /* size is size of destination, returns length of filename */
+int get_directory_from_path(char *dest,
+                            const char *src,
+                            int size); /* size is size of destination, returns length of directory */
 void latin1_to_ascii(char *, int);
 void latin1_to_utf8(char *, int);
 void utf8_to_latin1(char *);
@@ -64,7 +65,7 @@ long long atoll_x(const char *, int);
 void strntolower(char *, int);
 
 /* returns also empty tokens */
-char * strtok_r_e(char *, const char *, char **);
+char *strtok_r_e(char *, const char *, char **);
 
 /* 3th argument is the minimum digits that will be printed (minus sign not included), leading zero's will be added if necessary */
 /* if 4th argument is zero, only negative numbers will have the sign '-' character */
@@ -79,26 +80,26 @@ int fprint_ll_number_nonlocalized(FILE *, long long, int, int);
 int is_integer_number(char *);
 int is_number(char *);
 
-int round_125_cat(double);  /* returns 10, 20 or 50, depending on the value */
+int round_125_cat(double); /* returns 10, 20 or 50, depending on the value */
 
-void hextoascii(char *);  /* inline copy */
-void bintoascii(char *);  /* inline copy */
-void bintohex(char *);    /* inline copy */
-void asciitohex(char *, const char *);  /* destination must have double the size of source! */
-void asciitobin(char *, const char *);  /* destination must have eight times the size of source! */
-void hextobin(char *, const char *);    /* destination must have four times the size of source! */
+void hextoascii(char *);               /* inline copy */
+void bintoascii(char *);               /* inline copy */
+void bintohex(char *);                 /* inline copy */
+void asciitohex(char *, const char *); /* destination must have double the size of source! */
+void asciitobin(char *, const char *); /* destination must have eight times the size of source! */
+void hextobin(char *, const char *);   /* destination must have four times the size of source! */
 
 /* Converts a double to Giga/Mega/Kilo/milli/micro/etc. */
 /* int is number of decimals and size of destination. Result is written into the string argument */
 int convert_to_metric_suffix(char *, double, int, int);
 
-double round_up_step125(double, double *);      /* Rounds the value up to 1-2-5 steps */
-double round_down_step125(double, double *);    /* Rounds the value down to 1-2-5 steps */
-double round_to_3digits(double);   /* Rounds the value to max 3 digits */
+double round_up_step125(double, double *);   /* Rounds the value up to 1-2-5 steps */
+double round_down_step125(double, double *); /* Rounds the value down to 1-2-5 steps */
+double round_to_3digits(double);             /* Rounds the value to max 3 digits */
 
-int strtoipaddr(unsigned int *, const char *);  /* convert a string "192.168.1.12" to an integer */
+int strtoipaddr(unsigned int *, const char *); /* convert a string "192.168.1.12" to an integer */
 
-int dblcmp(double, double);  /* returns 0 when equal */
+int dblcmp(double, double); /* returns 0 when equal */
 
 int base64_dec(const void *, void *, int);
 
@@ -123,5 +124,3 @@ int strlcat(char *, const char *, int);
 #endif
 
 #endif
-
-

@@ -25,21 +25,19 @@
 ***************************************************************************
 */
 
-
 #ifndef UI_PLAYBACK_DIALOG_H
 #define UI_PLAYBACK_DIALOG_H
 
-
-#include <QtGlobal>
 #include <QApplication>
-#include <QObject>
-#include <QWidget>
 #include <QDialog>
-#include <QLabel>
-#include <QSpinBox>
 #include <QDoubleSpinBox>
-#include <QTimer>
+#include <QLabel>
 #include <QMessageBox>
+#include <QObject>
+#include <QSpinBox>
+#include <QTimer>
+#include <QWidget>
+#include <QtGlobal>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,67 +47,42 @@
 #include "mainwindow.h"
 #include "utils.h"
 
-
-
 class UI_Mainwindow;
-
-
 
 class UI_playback_window : public QDialog
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-  UI_playback_window(QWidget *parent);
+    UI_playback_window(QWidget *parent);
 
-  UI_Mainwindow *mainwindow;
+    UI_Mainwindow *mainwindow;
 
 private:
+    QLabel *rec_fend_label, *rec_fint_label, *rep_fstart_label, *rep_fend_label, *rep_fint_label;
 
-  QLabel *rec_fend_label,
-         *rec_fint_label,
-         *rep_fstart_label,
-         *rep_fend_label,
-         *rep_fint_label;
+    QSpinBox *rec_fend_spinbox, *rep_fstart_spinbox, *rep_fend_spinbox;
 
-  QSpinBox *rec_fend_spinbox,
-           *rep_fstart_spinbox,
-           *rep_fend_spinbox;
+    QDoubleSpinBox *rec_fint_spinbox, *rep_fint_spinbox;
 
-  QDoubleSpinBox *rec_fint_spinbox,
-                 *rep_fint_spinbox;
+    QPushButton *close_button, *toggle_playback_button;
 
-  QPushButton *close_button,
-              *toggle_playback_button;
+    QTimer *t1;
 
-  QTimer *t1;
+    struct device_settings *devparms;
 
-  struct device_settings *devparms;
-
-  char rec_fmax_resp[128],
-       rec_fend_resp[128],
-       rec_fint_resp[128],
-       rep_fstart_resp[128],
-       rep_fend_resp[128],
-       rep_fint_resp[128],
-       rep_fmax_resp[128];
+    char rec_fmax_resp[128], rec_fend_resp[128], rec_fint_resp[128], rep_fstart_resp[128],
+        rep_fend_resp[128], rep_fint_resp[128], rep_fmax_resp[128];
 
 private slots:
 
-  void toggle_playback();
-  void t1_func();
-  void rec_fend_spinbox_changed(int);
-  void rec_fint_spinbox_changed(double);
-  void rep_fstart_spinbox_changed(int);
-  void rep_fend_spinbox_changed(int);
-  void rep_fint_spinbox_changed(double);
+    void toggle_playback();
+    void t1_func();
+    void rec_fend_spinbox_changed(int);
+    void rec_fint_spinbox_changed(double);
+    void rep_fstart_spinbox_changed(int);
+    void rep_fend_spinbox_changed(int);
+    void rep_fint_spinbox_changed(double);
 };
 
-
 #endif
-
-
-
-
-
-

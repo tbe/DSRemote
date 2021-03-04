@@ -25,78 +25,69 @@
 ***************************************************************************
 */
 
-
-
-
-
 #include "tled.h"
 
-
-TLed::TLed(QWidget *p) : QWidget(p)
+TLed::TLed(QWidget *p)
+    : QWidget(p)
 {
-  OnColor = QColor(Qt::green);
-  OffColor = QColor(Qt::darkGreen);
-  value = false;
+    OnColor = QColor(Qt::green);
+    OffColor = QColor(Qt::darkGreen);
+    value = false;
 }
-
 
 void TLed::paintEvent(QPaintEvent *)
 {
-  QPainter paint(this);
+    QPainter paint(this);
 #if QT_VERSION >= 0x050000
-  paint.setRenderHint(QPainter::Qt4CompatiblePainting, true);
+    paint.setRenderHint(QPainter::Qt4CompatiblePainting, true);
 #endif
-  drawLed(&paint);
+    drawLed(&paint);
 }
-
 
 void TLed::drawLed(QPainter *painter)
 {
-  int w, h, m, n, o;
+    int w, h, m, n, o;
 
-  QColor color;
+    QColor color;
 
-  painter->save();
+    painter->save();
 
-  w = this->width();
-  h = this->height();
-  m = qMin(w,h);
-  n = m / 2;
-  o = m / 3;
-  if(value)  color = OnColor;
-  else  color = OffColor;
+    w = this->width();
+    h = this->height();
+    m = qMin(w, h);
+    n = m / 2;
+    o = m / 3;
+    if (value)
+        color = OnColor;
+    else
+        color = OffColor;
 
-  painter->setRenderHint(QPainter::Antialiasing);
-  QRadialGradient gradient(n, n, n, o, o);
-  if(value)  gradient.setColorAt(0.001, Qt::white);
-  gradient.setColorAt(0.9, color);
-  gradient.setColorAt(1, Qt::black);
-  painter->setBrush(gradient);
-  painter->drawEllipse(0, 0, m, m);
+    painter->setRenderHint(QPainter::Antialiasing);
+    QRadialGradient gradient(n, n, n, o, o);
+    if (value)
+        gradient.setColorAt(0.001, Qt::white);
+    gradient.setColorAt(0.9, color);
+    gradient.setColorAt(1, Qt::black);
+    painter->setBrush(gradient);
+    painter->drawEllipse(0, 0, m, m);
 
-  painter->restore();
+    painter->restore();
 }
-
 
 void TLed::setOnColor(QColor newColor)
 {
-  OnColor = newColor;
-  update();
+    OnColor = newColor;
+    update();
 }
-
 
 void TLed::setOffColor(QColor newColor)
 {
-  OffColor = newColor;
-  update();
+    OffColor = newColor;
+    update();
 }
-
 
 void TLed::setValue(bool newValue)
 {
-  value = newValue;
-  update();
+    value = newValue;
+    update();
 }
-
-
-

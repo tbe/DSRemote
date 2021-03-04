@@ -25,88 +25,62 @@
 ***************************************************************************
 */
 
-
-
-
 #ifndef SETTINGS_DIALOG_H
 #define SETTINGS_DIALOG_H
 
-
-
 #include <QApplication>
-#include <QObject>
+#include <QCheckBox>
+#include <QComboBox>
 #include <QDialog>
 #include <QLabel>
-#include <QPushButton>
-#include <QComboBox>
-#include <QCheckBox>
-#include <QSettings>
-#include <QRadioButton>
-#include <QSpinBox>
 #include <QLineEdit>
+#include <QObject>
+#include <QPushButton>
+#include <QRadioButton>
+#include <QSettings>
+#include <QSpinBox>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "mainwindow.h"
 #include "global.h"
-
+#include "mainwindow.h"
 
 class UI_Mainwindow;
 
-
 class UI_settings_window : public QDialog
 {
-  Q_OBJECT
+    Q_OBJECT
 
 public:
-
-  UI_settings_window(QWidget *parent=0);
+    UI_settings_window(QWidget *parent = 0);
 
 private:
+    QPushButton *cancelButton, *applyButton;
 
-QPushButton  *cancelButton,
-             *applyButton;
+    QRadioButton *usbRadioButton, *lanIPRadioButton;
 
-QRadioButton *usbRadioButton,
-             *lanIPRadioButton;
+    QComboBox *comboBox1;
 
-QComboBox    *comboBox1;
+    QSpinBox *refreshSpinbox, *ipSpinbox1, *ipSpinbox2, *ipSpinbox3, *ipSpinbox4;
 
-QSpinBox     *refreshSpinbox,
-             *ipSpinbox1,
-             *ipSpinbox2,
-             *ipSpinbox3,
-             *ipSpinbox4;
+    QLabel *refreshLabel, *invScrShtLabel, *showfpsLabel, *extendvertdivLabel, *hostnameLabel;
 
-QLabel       *refreshLabel,
-             *invScrShtLabel,
-             *showfpsLabel,
-             *extendvertdivLabel,
-             *hostnameLabel;
+    QCheckBox *invScrShtCheckbox, *showfpsCheckbox, *extendvertdivCheckbox;
 
-QCheckBox    *invScrShtCheckbox,
-             *showfpsCheckbox,
-             *extendvertdivCheckbox;
+    QLineEdit *HostLineEdit;
 
-QLineEdit     *HostLineEdit;
-
-UI_Mainwindow *mainwindow;
+    UI_Mainwindow *mainwindow;
 
 private slots:
 
-void applyButtonClicked();
-void refreshSpinboxChanged(int);
-void invScrShtCheckboxChanged(int);
-void showfpsCheckboxChanged(int);
-void extendvertdivCheckboxChanged(int);
-void hostnamechanged(QString);
-
+    void applyButtonClicked();
+    void refreshSpinboxChanged(int);
+    void invScrShtCheckboxChanged(int);
+    void showfpsCheckboxChanged(int);
+    void extendvertdivCheckboxChanged(int);
+    void hostnamechanged(QString);
 };
 
-
-
 #endif
-
-
