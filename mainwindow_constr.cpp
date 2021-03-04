@@ -34,8 +34,6 @@ UI_Mainwindow::UI_Mainwindow()
 {
   int i, pxw;
 
-  char str[1024];
-
   QPixmap pxm(500, 100);
 
   QPainter p_aint(&pxm);
@@ -66,8 +64,7 @@ UI_Mainwindow::UI_Mainwindow()
 
   QApplication::setFont(*appfont);
 
-  snprintf(str, 1024, "font: %ipx;", pxw);
-  setStyleSheet(str);
+  setStyleSheet(QString("font: %1px").arg(pxw));
 
   setlocale(LC_NUMERIC, "C");
 
@@ -175,7 +172,7 @@ UI_Mainwindow::UI_Mainwindow()
 
   devparms.fft_voffset = 20.0;
 
-  strlcpy(devparms.modelname, "-----", 128);
+  devparms.modelname = "-----";
 
   pthread_mutex_init(&devparms.mutexx, NULL);
 
@@ -542,11 +539,10 @@ UI_Mainwindow::UI_Mainwindow()
 
   device = NULL;
 
-  strlcpy(recent_savedir, settings.value("path/savedir").toString().toLocal8Bit().data(), MAX_PATHLEN);
+  recent_savedir = settings.value("path/savedir").toString();
 
-  strlcpy(str, settings.value("connection/type").toString().toLatin1().data(), 1024);
-
-  if(!strcmp(str, "LAN"))
+  auto connTypeStr = settings.value("connection/type").toString();
+  if(connTypeStr == "LAN")
   {
     devparms.connectiontype = 1;
   }

@@ -421,8 +421,6 @@ void WaveCurve::drawTopLabels(QPainter *painter)
 {
   int i;
 
-  char str[512];
-
   double dtmp1, dtmp2;
 
   QPainterPath path;
@@ -479,33 +477,20 @@ void WaveCurve::drawTopLabels(QPainter *painter)
 
   painter->drawText(125, 20, "H");
 
-  convert_to_metric_suffix(str, devparms->timebasescale, 1, 512);
 
-  remove_trailing_zeros(str);
-
-  strlcat(str, "s", 512);
-
-  painter->drawText(140, 5, 70, 20, Qt::AlignCenter, str);
+  // remove_trailing_zeros(str);
+  painter->drawText(140, 5, 70, 20, Qt::AlignCenter, suffixed_metric_value(devparms->timebasescale, 1) + "s");
 
 //////////////// samplerate ///////////////////////////////
 
   painter->setPen(Qt::gray);
 
-  convert_to_metric_suffix(str, devparms->samplerate, 0, 512);
-
-  strlcat(str, "Sa/s", 512);
-
-  painter->drawText(200, -1, 85, 20, Qt::AlignCenter, str);
+  painter->drawText(200, -1, 85, 20, Qt::AlignCenter, suffixed_metric_value(devparms->samplerate, 0) + "Sa/s");
 
   if(devparms->acquirememdepth)
   {
-    convert_to_metric_suffix(str, devparms->acquirememdepth, 1, 512);
-
-    remove_trailing_zeros(str);
-
-    strlcat(str, "pts", 512);
-
-    painter->drawText(200, 14, 85, 20, Qt::AlignCenter, str);
+    //remove_trailing_zeros(str);
+    painter->drawText(200, 14, 85, 20, Qt::AlignCenter, suffixed_metric_value(devparms->acquirememdepth, 1) + "pts");
   }
   else
   {
@@ -561,11 +546,7 @@ void WaveCurve::drawTopLabels(QPainter *painter)
 
   painter->drawText(555, 20, "D");
 
-  convert_to_metric_suffix(str, devparms->timebaseoffset + devparms->viewer_center_position, 4, 512);
-
-  strlcat(str, "s", 512);
-
-  painter->drawText(570, 5, 85, 20, Qt::AlignCenter, str);
+  painter->drawText(570, 5, 85, 20, Qt::AlignCenter, suffixed_metric_value(devparms->timebaseoffset + devparms->viewer_center_position, 4) + "s");
 
 //////////////// trigger ///////////////////////////////
 
@@ -579,9 +560,8 @@ void WaveCurve::drawTopLabels(QPainter *painter)
 
   painter->drawText(670, 20, "T");
 
-  convert_to_metric_suffix(str, devparms->triggeredgelevel[devparms->triggeredgesource], 2, 512);
-
-  strlcat(str, devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]], 512);
+  QString trgLvl = suffixed_metric_value(devparms->triggeredgelevel[devparms->triggeredgesource], 2);
+  trgLvl += QString::fromLocal8Bit( devparms->chanunitstr[devparms->chanunit[devparms->triggeredgesource]],2);
 
   if(devparms->triggeredgesource < 4)
   {
@@ -601,18 +581,20 @@ void WaveCurve::drawTopLabels(QPainter *painter)
 
   if(devparms->triggeredgesource != 6)
   {
-    painter->drawText(735, 5, 85, 20, Qt::AlignCenter, str);
+    painter->drawText(735, 5, 85, 20, Qt::AlignCenter, trgLvl);
   }
 
   path = QPainterPath();
 
   path.addRoundedRect(725, 7, 15, 15, 3, 3);
 
+  QString txt;
+
   if(devparms->triggeredgesource < 4)
   {
     painter->fillPath(path, SignalColor[devparms->triggeredgesource]);
 
-    snprintf(str, 512, "%i", devparms->triggeredgesource + 1);
+    txt = QString::number(devparms->triggeredgesource + 1);
   }
   else
   {
@@ -620,11 +602,11 @@ void WaveCurve::drawTopLabels(QPainter *painter)
     {
       case 4:
       case 5: painter->fillPath(path, Qt::green);
-              strlcpy(str, "E", 512);
-              break;
+        txt = "E";
+        break;
       case 6: painter->fillPath(path, QColor(255, 64, 0));
-              strlcpy(str, "AC", 512);
-              break;
+        txt = "AC";
+        break;
     }
   }
 
@@ -658,7 +640,7 @@ void WaveCurve::drawTopLabels(QPainter *painter)
 
   painter->setPen(Qt::black);
 
-  painter->drawText(725, 8, 15, 15, Qt::AlignCenter, str);
+  painter->drawText(725, 8, 15, 15, Qt::AlignCenter, txt);
 }
 
 
@@ -666,10 +648,7 @@ void WaveCurve::drawArrow(QPainter *painter, int xpos, int ypos, int rot, QColor
 {
   QPainterPath path;
 
-  char str[4];
-
-  str[0] = ch;
-  str[1] = 0;
+  auto str = QString::number(ch);
 
   if(rot == 0)
   {
@@ -955,9 +934,6 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
 
   double pix_per_smpl;
 
-  char str[512];
-
-
   painter->setClipping(true);
   painter->setClipRegion(QRegion(0, 0, dw, dh), Qt::ReplaceClip);
 
@@ -1080,41 +1056,38 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
         {
           if(devparms->math_decode_format == 0)  // hex
           {
-            snprintf(str, 512, "%02X", devparms->math_decode_uart_tx_val[i]);
-
-            painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
+            painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter,
+                              QStringLiteral("%1").arg(devparms->math_decode_uart_tx_val[i], 2,16,QLatin1Char('0')));
           }
           else if(devparms->math_decode_format == 1)  // ASCII
             {
-              ascii_decode_control_char(devparms->math_decode_uart_tx_val[i], str, 512);
-
-              painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
+              painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter,
+                                ascii_decode_control_char(devparms->math_decode_uart_tx_val[i]));
             }
             else if(devparms->math_decode_format == 2)  // decimal
               {
-                snprintf(str, 512, "%u", (unsigned int)devparms->math_decode_uart_tx_val[i]);
-
-                painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
+                painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter,
+                                  QString::number((unsigned int)devparms->math_decode_uart_tx_val[i]));
               }
               else if(devparms->math_decode_format == 3)  // binary
                 {
+                  QString str;
                   for(j=0; j<devparms->math_decode_uart_width; j++)
                   {
-                    str[devparms->math_decode_uart_width - 1 - j] = ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
+                    str += ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
                   }
 
-                  str[j] = 0;
+                  std::reverse(str.begin(),str.end());
 
                   painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
                 }
                 else if(devparms->math_decode_format == 4)  // line
                   {
+                    QString str;
                     for(j=0; j<devparms->math_decode_uart_width; j++)
                     {
-                      str[j] = ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
+                      str += ((devparms->math_decode_uart_tx_val[i] >> j) & 1) + '0';
                     }
-
-                    str[j] = 0;
 
                     painter->drawText((devparms->math_decode_uart_tx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_tx - 13, cell_width, 30, Qt::AlignCenter, str);
                   }
@@ -1155,41 +1128,38 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
         {
           if(devparms->math_decode_format == 0)  // hex
           {
-            snprintf(str, 512, "%02X", devparms->math_decode_uart_rx_val[i]);
-
-            painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
+            painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter,
+                              QStringLiteral("%1").arg(devparms->math_decode_uart_rx_val[i],2,16,QLatin1Char('0')));
           }
           else if(devparms->math_decode_format == 1)  // ASCII
             {
-              ascii_decode_control_char(devparms->math_decode_uart_rx_val[i], str, 512);
-
-              painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
+              painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter,
+                                ascii_decode_control_char(devparms->math_decode_uart_rx_val[i]));
             }
             else if(devparms->math_decode_format == 2)  // decimal
               {
-                snprintf(str, 512, "%u", (unsigned int)devparms->math_decode_uart_rx_val[i]);
-
-                painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
+                painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter,
+                                  QString::number((unsigned int)devparms->math_decode_uart_rx_val[i]));
               }
               else if(devparms->math_decode_format == 3)  // binary
                 {
+                  QString str;
                   for(j=0; j<devparms->math_decode_uart_width; j++)
                   {
-                    str[devparms->math_decode_uart_width - 1 - j] = ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
+                    str += ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
                   }
 
-                  str[j] = 0;
+                  std::reverse(str.begin(),str.end());
 
                   painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
                 }
                 else if(devparms->math_decode_format == 4)  // line
                   {
+                    QString str;
                     for(j=0; j<devparms->math_decode_uart_width; j++)
                     {
-                      str[j] = ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
+                      str += ((devparms->math_decode_uart_rx_val[i] >> j) & 1) + '0';
                     }
-
-                    str[j] = 0;
 
                     painter->drawText((devparms->math_decode_uart_rx_val_pos[i] - sample_start) * pix_per_smpl, line_h_uart_rx - 13, cell_width, 30, Qt::AlignCenter, str);
                   }
@@ -1295,7 +1265,7 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
                 break;
         case 4: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[LINE]");
                 break;
-        default: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, "Mosi[\?\?\?]");
+        default: painter->drawText(5, line_h_spi_mosi - 35, 80, 30, Qt::AlignCenter, R"(Mosi[???])");
                 break;
       }
 
@@ -1303,54 +1273,59 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
       {
         if(devparms->math_decode_format == 0)  // hex
         {
+          QString str;
           switch(spi_chars)
           {
-            case 1: snprintf(str, 512, "%02X", devparms->math_decode_spi_mosi_val[i]);
-                    break;
-            case 2: snprintf(str, 512, "%04X", devparms->math_decode_spi_mosi_val[i]);
-                    break;
-            case 3: snprintf(str, 512, "%06X", devparms->math_decode_spi_mosi_val[i]);
-                    break;
-            case 4: snprintf(str, 512, "%08X", devparms->math_decode_spi_mosi_val[i]);
-                    break;
+            case 1:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],2,16,QLatin1Char('0'));
+              break;
+            case 2:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],4,16,QLatin1Char('0'));
+              break;
+            case 3:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],6,16,QLatin1Char('0'));
+              break;
+            case 4:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_mosi_val[i],8,16,QLatin1Char('0'));
+              break;
           }
 
           painter->drawText((devparms->math_decode_spi_mosi_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
         }
         else if(devparms->math_decode_format == 1)  // ASCII
           {
+            QString str;
             for(k=0, j=0; k<spi_chars; k++)
             {
-              j += ascii_decode_control_char(devparms->math_decode_spi_mosi_val[i] >> (k * 8), str + j, 512 - j);
+              str += ascii_decode_control_char(devparms->math_decode_spi_mosi_val[i] >> (k * 8));
             }
 
             painter->drawText((devparms->math_decode_spi_mosi_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
           }
           else if(devparms->math_decode_format == 2)  // decimal
             {
-              snprintf(str, 512, "%u", devparms->math_decode_spi_mosi_val[i]);
-
-              painter->drawText((devparms->math_decode_spi_mosi_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
+              painter->drawText((devparms->math_decode_spi_mosi_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter,
+                                QString::number(devparms->math_decode_spi_mosi_val[i]));
             }
             else if(devparms->math_decode_format == 3)  // binary
               {
+                QString str;
                 for(j=0; j<devparms->math_decode_spi_width; j++)
                 {
-                  str[devparms->math_decode_spi_width - 1 - j] = ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
+                  str += ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
                 }
 
-                str[j] = 0;
+                std::reverse(str.begin(),str.end());
 
                 painter->drawText((devparms->math_decode_spi_mosi_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
               }
               else if(devparms->math_decode_format == 4)  // line
                 {
+                  QString str;
                   for(j=0; j<devparms->math_decode_spi_width; j++)
                   {
-                    str[j] = ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
+                    str += ((devparms->math_decode_spi_mosi_val[i] >> j) & 1) + '0';
                   }
-
-                  str[devparms->math_decode_spi_width] = 0;
 
                   painter->drawText((devparms->math_decode_spi_mosi_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_mosi - 13, cell_width, 30, Qt::AlignCenter, str);
                 }
@@ -1371,7 +1346,7 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
                 break;
         case 4: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[LINE]");
                 break;
-        default: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, "Miso[\?\?\?]");
+        default: painter->drawText(5, line_h_spi_miso - 35, 80, 30, Qt::AlignCenter, R"(Miso[???])");
                 break;
       }
 
@@ -1379,54 +1354,60 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
       {
         if(devparms->math_decode_format == 0)  // hex
         {
+
+          QString str;
           switch(spi_chars)
           {
-            case 1: snprintf(str, 512, "%02X", devparms->math_decode_spi_miso_val[i]);
-                    break;
-            case 2: snprintf(str, 512, "%04X", devparms->math_decode_spi_miso_val[i]);
-                    break;
-            case 3: snprintf(str, 512, "%06X", devparms->math_decode_spi_miso_val[i]);
-                    break;
-            case 4: snprintf(str, 512, "%08X", devparms->math_decode_spi_miso_val[i]);
-                    break;
+            case 1:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],2,16,QLatin1Char('0'));
+              break;
+            case 2:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],4,16,QLatin1Char('0'));
+              break;
+            case 3:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],6,16,QLatin1Char('0'));
+              break;
+            case 4:
+              str = QStringLiteral("%1").arg(devparms->math_decode_spi_miso_val[i],8,16,QLatin1Char('0'));
+              break;
           }
 
           painter->drawText((devparms->math_decode_spi_miso_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
         }
         else if(devparms->math_decode_format == 1)  // ASCII
           {
+            QString str;
             for(k=0, j=0; k<spi_chars; k++)
             {
-              j += ascii_decode_control_char(devparms->math_decode_spi_miso_val[i] >> (k * 8), str + j, 512 - j);
+              str += ascii_decode_control_char(devparms->math_decode_spi_miso_val[i] >> (k * 8));
             }
 
             painter->drawText((devparms->math_decode_spi_miso_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
           }
           else if(devparms->math_decode_format == 2)  // decimal
             {
-              snprintf(str, 512, "%u", devparms->math_decode_spi_miso_val[i]);
-
-              painter->drawText((devparms->math_decode_spi_miso_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
+              painter->drawText((devparms->math_decode_spi_miso_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter,
+                                QString::number(devparms->math_decode_spi_miso_val[i]));
             }
             else if(devparms->math_decode_format == 3)  // binary
               {
+                QString str;
                 for(j=0; j<devparms->math_decode_spi_width; j++)
                 {
-                  str[devparms->math_decode_spi_width - 1 - j] = ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
+                  str +=  ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
                 }
 
-                str[j] = 0;
+                std::reverse(str.begin(),str.end());
 
                 painter->drawText((devparms->math_decode_spi_miso_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
               }
               else if(devparms->math_decode_format == 4)  // line
                 {
+                  QString str;
                   for(j=0; j<devparms->math_decode_spi_width; j++)
                   {
-                    str[j] = ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
+                    str += ((devparms->math_decode_spi_miso_val[i] >> j) & 1) + '0';
                   }
-
-                  str[devparms->math_decode_spi_width] = 0;
 
                   painter->drawText((devparms->math_decode_spi_miso_val_pos[i] - sample_start) * pix_per_smpl, line_h_spi_miso - 13, cell_width, 30, Qt::AlignCenter, str);
                 }
@@ -1438,92 +1419,86 @@ void WaveCurve::draw_decoder(QPainter *painter, int dw, int dh)
 }
 
 
-int WaveCurve::ascii_decode_control_char(char ch, char *str, int sz)
+QString WaveCurve::ascii_decode_control_char(char ch)
 {
   if((ch > 32) && (ch < 127))
   {
-    str[0] = ch;
-
-    str[1] = 0;
-
-    return 1;
+    return QString(ch);
   }
 
   switch(ch)
   {
-    case  0: strlcpy(str, "NULL", sz);
-             break;
-    case  1: strlcpy(str, "SOH", sz);
-             break;
-    case  2: strlcpy(str, "STX", sz);
-             break;
-    case  3: strlcpy(str, "ETX", sz);
-             break;
-    case  4: strlcpy(str, "EOT", sz);
-             break;
-    case  5: strlcpy(str, "ENQ", sz);
-             break;
-    case  6: strlcpy(str, "ACK", sz);
-             break;
-    case  7: strlcpy(str, "BEL", sz);
-             break;
-    case  8: strlcpy(str, "BS", sz);
-             break;
-    case  9: strlcpy(str, "HT", sz);
-             break;
-    case 10: strlcpy(str, "LF", sz);
-             break;
-    case 11: strlcpy(str, "VT", sz);
-             break;
-    case 12: strlcpy(str, "FF", sz);
-             break;
-    case 13: strlcpy(str, "CR", sz);
-             break;
-    case 14: strlcpy(str, "SO", sz);
-             break;
-    case 15: strlcpy(str, "SI", sz);
-             break;
-    case 16: strlcpy(str, "DLE", sz);
-             break;
-    case 17: strlcpy(str, "DC1", sz);
-             break;
-    case 18: strlcpy(str, "DC2", sz);
-             break;
-    case 19: strlcpy(str, "DC3", sz);
-             break;
-    case 20: strlcpy(str, "DC4", sz);
-             break;
-    case 21: strlcpy(str, "NAK", sz);
-             break;
-    case 22: strlcpy(str, "SYN", sz);
-             break;
-    case 23: strlcpy(str, "ETB", sz);
-             break;
-    case 24: strlcpy(str, "CAN", sz);
-             break;
-    case 25: strlcpy(str, "EM", sz);
-             break;
-    case 26: strlcpy(str, "SUB", sz);
-             break;
-    case 27: strlcpy(str, "ESC", sz);
-             break;
-    case 28: strlcpy(str, "FS", sz);
-             break;
-    case 29: strlcpy(str, "GS", sz);
-             break;
-    case 30: strlcpy(str, "RS", sz);
-             break;
-    case 31: strlcpy(str, "US", sz);
-             break;
-    case 32: strlcpy(str, "SP", sz);
-             break;
-    case 127: strlcpy(str, "DEL", sz);
-             break;
-    default: strlcpy(str, ".", sz);
-             break;
+    case  0:
+      return QStringLiteral("NULL");
+    case  1:
+      return QStringLiteral("SOH");
+    case  2:
+      return QStringLiteral("STX");
+    case  3:
+      return QStringLiteral("ETX");
+    case  4:
+      return QStringLiteral("EOT");
+    case  5:
+      return QStringLiteral("ENQ");
+    case  6:
+      return QStringLiteral("ACK");
+    case  7:
+      return QStringLiteral("BEL");
+    case  8:
+      return QStringLiteral("BS");
+    case  9:
+      return QStringLiteral("HT");
+    case 10:
+      return QStringLiteral("LF");
+    case 11:
+      return QStringLiteral("VT");
+    case 12:
+      return QStringLiteral("FF");
+    case 13:
+      return QStringLiteral("CR");
+    case 14:
+      return QStringLiteral("SO");
+    case 15:
+      return QStringLiteral("SI");
+    case 16:
+      return QStringLiteral("DLE");
+    case 17:
+      return QStringLiteral("DC1");
+    case 18:
+      return QStringLiteral("DC2");
+    case 19:
+      return QStringLiteral("DC3");
+    case 20:
+      return QStringLiteral("DC4");
+    case 21:
+      return QStringLiteral("NAK");
+    case 22:
+      return QStringLiteral("SYN");
+    case 23:
+      return QStringLiteral("ETB");
+    case 24:
+      return QStringLiteral("CAN");
+    case 25:
+      return QStringLiteral("EM");
+    case 26:
+      return QStringLiteral("SUB");
+    case 27:
+      return QStringLiteral("ESC");
+    case 28:
+      return QStringLiteral("FS");
+    case 29:
+      return QStringLiteral("GS");
+    case 30:
+      return QStringLiteral("RS");
+    case 31:
+      return QStringLiteral("US");
+    case 32:
+      return QStringLiteral("SP");
+    case 127:
+      return QStringLiteral("DEL");
   }
 
-  return strlen(str);
+  return QStringLiteral(".");
 }
 
 

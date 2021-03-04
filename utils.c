@@ -26,9 +26,6 @@
 */
 
 
-
-
-
 #include "utils.h"
 
 
@@ -1801,7 +1798,6 @@ double round_down_step125(double val, double *ratio)
 
   return ltmp;
 }
-
 
 int convert_to_metric_suffix(char *dest, double value, int decimals, int sz)
 {

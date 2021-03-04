@@ -33,8 +33,6 @@ read_settings_thread::read_settings_thread()
 {
   device = NULL;
 
-  err_str[0] = 0;
-
   err_num = -1;
 
   devparms = NULL;
@@ -55,9 +53,9 @@ int read_settings_thread::get_error_num(void)
 }
 
 
-void read_settings_thread::get_error_str(char *dest, int sz)
+QString read_settings_thread::get_error_str()
 {
-  strlcpy(dest, err_str, sz);
+  return err_str;
 }
 
 
@@ -72,7 +70,8 @@ void read_settings_thread::set_devparm_ptr(struct device_settings *devp)
   devparms = devp;
 }
 
-
+// TODO: refactor me
+//  - this function is huuuge, uses raw strings everywhere, and may be part of another class
 void read_settings_thread::run()
 {
   int chn, line=0;
@@ -2792,12 +2791,11 @@ void read_settings_thread::run()
 
 GDS_OUT_ERROR:
 
-  snprintf(err_str, 4096,
+  err_str = QString(
            "An error occurred while reading settings from device.\n"
-           "Command sent: %s\n"
-           "Received: %s\n"
-           "File %s line %i",
-           str, device->buf, __FILE__, line);
+           "Command sent: %1\n"
+           "Received: %2\n"
+           "File %3 line %4").arg(str).arg(device->buf).arg(__FILE__).arg(line);
 
   err_num = -1;
 

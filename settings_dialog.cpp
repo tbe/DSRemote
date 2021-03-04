@@ -136,7 +136,7 @@ UI_settings_window::UI_settings_window(QWidget *parnt)
 
   if(settings.contains("connection/hostname"))
   {
-    strncpy(mainwindow->devparms.hostname, settings.value("connection/hostname").toString().toLatin1().data(), 63);
+    mainwindow->devparms.hostname = settings.value("connection/hostname").toString();
   }
   mainwindow->devparms.hostname[63] = 0;
 
@@ -284,7 +284,7 @@ void UI_settings_window::applyButtonClicked()
 
   settings.setValue("connection/ip", dev_str);
 
-  strncpy(mainwindow->devparms.hostname, HostLineEdit->text().toLatin1().data(), 63);
+  mainwindow->devparms.hostname = HostLineEdit->text();
   mainwindow->devparms.hostname[63] = 0;
 
   settings.setValue("connection/hostname", mainwindow->devparms.hostname);

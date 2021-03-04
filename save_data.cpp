@@ -34,8 +34,7 @@ void UI_Mainwindow::save_screenshot()
 {
   int n;
 
-  char str[512],
-       opath[MAX_PATHLEN];
+  QString errStr, opath;
 
   QPainter painter;
 
@@ -66,7 +65,7 @@ void UI_Mainwindow::save_screenshot()
   if(w_msg_box.exec() != QDialog::Accepted)
   {
     disconnect(&get_data_thrd, 0, 0, 0);
-    strlcpy(str, "Aborted by user.", 512);
+    errStr =  "Aborted by user.";
     goto OUT_ERROR;
   }
 
@@ -75,19 +74,19 @@ void UI_Mainwindow::save_screenshot()
   n = get_data_thrd.get_num_bytes_rcvd();
   if(n < 0)
   {
-    strlcpy(str, "Can not read from device.", 512);
+    errStr = "Can not read from device.";
     goto OUT_ERROR;
   }
 
   if(device->sz != SCRN_SHOT_BMP_SZ)
   {
-    strlcpy(str, "Error, bitmap has wrong filesize\n", 512);
+    errStr = "Error, bitmap has wrong filesize";
     goto OUT_ERROR;
   }
 
   if(strncmp(device->buf, "BM", 2))
   {
-    strlcpy(str, "Error, file is not a bitmap\n", 512);
+    errStr = "Error, file is not a bitmap";
     goto OUT_ERROR;
   }
 
@@ -135,28 +134,27 @@ void UI_Mainwindow::save_screenshot()
     screenXpm.invertPixels(QImage::InvertRgb);
   }
 
-  opath[0] = 0;
-  if(recent_savedir[0]!=0)
+  if(!recent_savedir.isEmpty())
   {
-    strlcpy(opath, recent_savedir, MAX_PATHLEN);
-    strlcat(opath, "/", MAX_PATHLEN);
+    opath = recent_savedir;
+    opath += "/";
   }
-  strlcat(opath, "screenshot.png", MAX_PATHLEN);
+  opath += "screenshot.png";
 
-  strlcpy(opath, QFileDialog::getSaveFileName(this, "Save file", opath, "PNG files (*.png *.PNG)").toLocal8Bit().data(), MAX_PATHLEN);
+  opath = QFileDialog::getSaveFileName(this, "Save file", opath, "PNG files (*.png *.PNG)");
 
-  if(!strcmp(opath, ""))
+  if(opath.isEmpty())
   {
     scrn_timer->start(devparms.screentimerival);
 
     return;
   }
+  recent_savedir = directory_from_path(opath);
 
-  get_directory_from_path(recent_savedir, opath, MAX_PATHLEN);
 
-  if(screenXpm.save(QString::fromLocal8Bit(opath), "PNG", 50) == false)
+  if(!screenXpm.save(opath, "PNG", 50))
   {
-    strlcpy(str, "Could not save file (unknown error)", 512);
+    errStr = "Could not save file (unknown error)";
     goto OUT_ERROR;
   }
 
@@ -166,7 +164,7 @@ void UI_Mainwindow::save_screenshot()
 
 OUT_ERROR:
 
-  if(get_data_thrd.isFinished() != true)
+  if(!get_data_thrd.isFinished())
   {
     connect(&get_data_thrd, SIGNAL(finished()), &w_msg_box, SLOT(accept()));
     w_msg_box.setText("Waiting for thread to finish, please wait...");
@@ -177,12 +175,12 @@ OUT_ERROR:
 
   QMessageBox msgBox;
   msgBox.setIcon(QMessageBox::Critical);
-  msgBox.setText(str);
+  msgBox.setText(errStr);
   msgBox.exec();
 }
 
 
-void UI_Mainwindow::get_deep_memory_waveform(void)
+void UI_Mainwindow::get_deep_memory_waveform()
 {
   int i, k,
       n=0,
@@ -193,9 +191,9 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
       yref[MAX_CHNS],
       empty_buf;
 
-  char str[512];
-
   short *wavbuf[MAX_CHNS];
+
+  QString errStr, cmdStr;
 
   QEventLoop ev_loop;
 
@@ -239,13 +237,13 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
   if(!chns)
   {
-    strlcpy(str, "No active channels.", 512);
+    errStr = "No active channels.";
     goto OUT_ERROR;
   }
 
   if(mempnts < 1)
   {
-    strlcpy(str, "Can not download waveform when memory depth is set to \"Auto\".", 512);
+    errStr = "Can not download waveform when memory depth is set to \"Auto\".";
     goto OUT_ERROR;
   }
 
@@ -259,7 +257,7 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
     wavbuf[i] = (short *)malloc(mempnts * sizeof(short));
     if(wavbuf[i] == NULL)
     {
-      snprintf(str, 512, "Malloc error.  line %i file %s", __LINE__, __FILE__);
+      errStr = QString("Malloc error.  line %1 file %1").arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
   }
@@ -275,12 +273,9 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
       continue;
     }
 
-    snprintf(str, 512, "Downloading channel %i waveform data...", chn + 1);
-    progress.setLabelText(str);
+    progress.setLabelText(QString("Downloading channel %1 waveform data...").arg(chn+1));
 
-    snprintf(str, 512, ":WAV:SOUR CHAN%i", chn + 1);
-
-    tmc_write(str);
+    tmc_write(QString(":WAV:SOUR CHAN%1").arg(chn +1).toLocal8Bit().constData());
 
     tmc_write(":WAV:FORM BYTE");
 
@@ -300,7 +295,7 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
     if(devparms.yinc[chn] < 1e-6)
     {
-      snprintf(str, 512, "Error, parameter \"YINC\" out of range: %e  line %i file %s", devparms.yinc[chn], __LINE__, __FILE__);
+      errStr = QString("Error, parameter \"YINC\" out of range: %1  line %2 file %3").arg(devparms.yinc[chn]).arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
 
@@ -316,7 +311,8 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
     if((yref[chn] < 1) || (yref[chn] > 255))
     {
-      snprintf(str, 512, "Error, parameter \"YREF\" out of range: %i  line %i file %s", yref[chn], __LINE__, __FILE__);
+      errStr = QString("Error, parameter \"YREF\" out of range: %1  line %2 file %3")
+          .arg(yref[chn]).arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
 
@@ -332,7 +328,8 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
     if((devparms.yor[chn] < -255) || (devparms.yor[chn] > 255))
     {
-      snprintf(str, 512, "Error, parameter \"YOR\" out of range: %i  line %i file %s", devparms.yor[chn], __LINE__, __FILE__);
+      errStr = QString("Error, parameter \"YOR\" out of range: %1  line %2 file %3")
+          .arg(devparms.yor[chn]).arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
 
@@ -344,28 +341,26 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
       if(progress.wasCanceled())
       {
-        strlcpy(str, "Canceled", 512);
+        errStr = "Canceled";
         goto OUT_ERROR;
       }
 
-      snprintf(str, 512, ":WAV:STAR %i",  bytes_rcvd + 1);
-
       usleep(20000);
 
-      tmc_write(str);
+      tmc_write(QString(":WAV:STAR %1").arg(bytes_rcvd +1).toLocal8Bit().constData());
 
       if((bytes_rcvd + SAV_MEM_BSZ) > mempnts)
       {
-        snprintf(str, 512, ":WAV:STOP %i", mempnts);
+        cmdStr = QString(":WAV:STOP %1").arg(mempnts);
       }
       else
       {
-        snprintf(str, 512, ":WAV:STOP %i", bytes_rcvd + SAV_MEM_BSZ);
+        cmdStr = QString(":WAV:STOP %1").arg(bytes_rcvd + SAV_MEM_BSZ);
       }
 
       usleep(20000);
 
-      tmc_write(str);
+      tmc_write(cmdStr.toLocal8Bit().constData());
 
       usleep(20000);
 
@@ -378,21 +373,21 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
       n = get_data_thrd.get_num_bytes_rcvd();
       if(n < 0)
       {
-        snprintf(str, 512, "Can not read from device.  line %i file %s", __LINE__, __FILE__);
+        errStr = QString("Can not read from device.  line %i file %s").arg(__LINE__).arg(__FILE__);
         goto OUT_ERROR;
       }
 
       if(n == 0)
       {
-        snprintf(str, 512, "No waveform data available.");
+        errStr = "No waveform data available.";
         goto OUT_ERROR;
       }
 
-      printf("received %i bytes, total %i bytes\n", n, n + bytes_rcvd);
+      qDebug() << QString("received %1 bytes, total %1 bytes").arg(n).arg(n + bytes_rcvd);
 
       if(n > SAV_MEM_BSZ)
       {
-        snprintf(str, 512, "Datablock too big for buffer: %i  line %i file %s", n, __LINE__, __FILE__);
+        errStr = QString("Datablock too big for buffer: %1  line %2 file %3").arg(n).arg(__LINE__).arg(__FILE__);
         goto OUT_ERROR;
       }
 
@@ -428,7 +423,7 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
     if(bytes_rcvd < mempnts)
     {
-      snprintf(str, 512, "Download error.  line %i file %s", __LINE__, __FILE__);
+      errStr = QString("Download error.  line %1 file %1").arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
   }
@@ -442,11 +437,9 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
       continue;
     }
 
-    snprintf(str, 512, ":WAV:SOUR CHAN%i", chn + 1);
-
     usleep(20000);
 
-    tmc_write(str);
+    tmc_write(QString("WAV:SOUR CHAN%1").arg(chn + 1).toLocal8Bit().constData());
 
     usleep(20000);
 
@@ -476,7 +469,7 @@ void UI_Mainwindow::get_deep_memory_waveform(void)
 
   if(bytes_rcvd < mempnts)
   {
-    snprintf(str, 512, "Download error.  line %i file %s", __LINE__, __FILE__);
+    errStr = QString("Download error.  line %1 file %2").arg(__LINE__).arg(__FILE__);
     goto OUT_ERROR;
   }
   else
@@ -500,7 +493,7 @@ OUT_ERROR:
 
   statusLabel->setText("Downloading aborted");
 
-  if(get_data_thrd.isRunning() == true)
+  if(get_data_thrd.isRunning())
   {
     QMessageBox w_msg_box;
     w_msg_box.setIcon(QMessageBox::NoIcon);
@@ -512,11 +505,11 @@ OUT_ERROR:
     w_msg_box.exec();
   }
 
-  if(progress.wasCanceled() == false)
+  if(!progress.wasCanceled())
   {
     QMessageBox msgBox;
     msgBox.setIcon(QMessageBox::Critical);
-    msgBox.setText(str);
+    msgBox.setText(errStr);
     msgBox.exec();
   }
 
@@ -527,9 +520,7 @@ OUT_ERROR:
       continue;
     }
 
-    snprintf(str, 512, ":WAV:SOUR CHAN%i", chn + 1);
-
-    tmc_write(str);
+    tmc_write(QString(":WAV:SOUR CHAN%1").arg(chn + 1).toLocal8Bit().constData());
 
     tmc_write(":WAV:MODE NORM");
 
@@ -568,8 +559,7 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
       datrecs=1,
       ret_stat;
 
-  char str[512],
-       opath[MAX_PATHLEN];
+  QString errStr, opath;
 
   long long rec_len=0LL,
             datrecduration;
@@ -594,7 +584,7 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
 
   if(!chns)
   {
-    strlcpy(str, "No active channels.", 512);
+    errStr = "No active channels.";
     goto OUT_ERROR;
   }
 
@@ -609,32 +599,31 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
 
   if(rec_len < 100)
   {
-    strlcpy(str, "Can not save waveforms shorter than 10 uSec.\n"
-                "Select a higher memory depth or a higher timebase.", 512);
+    errStr = "Can not save waveforms shorter than 10 uSec.\n"
+             "Select a higher memory depth or a higher timebase.";
+
     goto OUT_ERROR;
   }
 
-  opath[0] = 0;
-  if(recent_savedir[0]!=0)
+  if(!recent_savedir.isEmpty())
   {
-    strlcpy(opath, recent_savedir, MAX_PATHLEN);
-    strlcat(opath, "/", MAX_PATHLEN);
+    opath = recent_savedir + "/";
   }
-  strlcat(opath, "waveform.edf", MAX_PATHLEN);
+  opath += "waveform.edf";
 
-  strlcpy(opath, QFileDialog::getSaveFileName(this, "Save file", opath, "EDF files (*.edf *.EDF)").toLocal8Bit().data(), MAX_PATHLEN);
+  opath = QFileDialog::getSaveFileName(this, "Save file", opath, "EDF files (*.edf *.EDF)");
 
-  if(!strcmp(opath, ""))
+  if(opath.isEmpty())
   {
     goto OUT_NORMAL;
   }
 
-  get_directory_from_path(recent_savedir, opath, MAX_PATHLEN);
+  recent_savedir = directory_from_path(opath);
 
-  hdl = edfopen_file_writeonly(opath, EDFLIB_FILETYPE_EDFPLUS, chns);
+  hdl = edfopen_file_writeonly(opath.toLocal8Bit().constData(), EDFLIB_FILETYPE_EDFPLUS, chns);
   if(hdl < 0)
   {
-    strlcpy(str, "Can not create EDF file.", 512);
+    errStr = "Can not create EDF file.";
     goto OUT_ERROR;
   }
 
@@ -648,8 +637,9 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
   {
     if(edf_set_micro_datarecord_duration(hdl, datrecduration))
     {
-      snprintf(str, 512, "Can not set datarecord duration of EDF file: %lli", datrecduration);
-      printf("\ndebug line %i: rec_len: %lli   datrecs: %i   datrecduration: %lli\n", __LINE__, rec_len, datrecs, datrecduration);
+      errStr = QString("Can not set datarecord duration of EDF file: %1").arg(datrecduration);
+      qDebug() << QString("line %1: rec_len: %2   datrecs: %3   datrecduration: %4")
+        .arg(__LINE__).arg(rec_len).arg(datrecs).arg(datrecduration);
       goto OUT_ERROR;
     }
   }
@@ -657,8 +647,9 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
   {
     if(edf_set_datarecord_duration(hdl, datrecduration / 10LL))
     {
-      snprintf(str, 512, "Can not set datarecord duration of EDF file: %lli", datrecduration);
-      printf("\ndebug line %i: rec_len: %lli   datrecs: %i   datrecduration: %lli\n", __LINE__, rec_len, datrecs, datrecduration);
+      errStr = QString("Can not set datarecord duration of EDF file: %1").arg(datrecduration);
+      qDebug() << QString("line %1: rec_len: %2   datrecs: %3   datrecduration: %4")
+          .arg(__LINE__).arg(rec_len).arg(datrecs).arg(datrecduration);
       goto OUT_ERROR;
     }
   }
@@ -687,13 +678,12 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
       edf_set_physical_minimum(hdl, j, 1000.0 * d_parms->yinc[chn] * -32768.0 / 32.0);
       edf_set_physical_dimension(hdl, j, "mV");
     }
-    snprintf(str, 512, "CHAN%i", chn + 1);
-    edf_set_label(hdl, j, str);
+    edf_set_label(hdl, j, QString("CHAN%1").arg(chn + 1).toLocal8Bit().constData());
 
     j++;
   }
 
-  edf_set_equipment(hdl, d_parms->modelname);
+  edf_set_equipment(hdl, d_parms->modelname.toLocal8Bit().constData());
 
 //  printf("datrecs: %i    smps_per_record: %i\n", datrecs, smps_per_record);
 
@@ -711,13 +701,13 @@ void UI_Mainwindow::save_wave_inspector_buffer_to_edf(struct device_settings *d_
 
   if(ret_stat != QDialog::Accepted)
   {
-    strlcpy(str, "Saving EDF file aborted.", 512);
+    errStr = "Saving EDF file aborted.";
     goto OUT_ERROR;
   }
 
   if(sav_data_thrd.get_error_num())
   {
-    sav_data_thrd.get_error_str(str, 512);
+    errStr = sav_data_thrd.get_error_str();
     goto OUT_ERROR;
   }
 
@@ -730,7 +720,7 @@ OUT_NORMAL:
     edfclose_file(hdl);
   }
 
-  if(!strcmp(opath, ""))
+  if(!opath.isEmpty())
   {
     statusLabel->setText("Save file canceled.");
   }
@@ -753,7 +743,7 @@ OUT_ERROR:
   }
 
   wi_msg_box.setIcon(QMessageBox::Critical);
-  wi_msg_box.setText(str);
+  wi_msg_box.setText(errStr);
   wi_msg_box.setStandardButtons(QMessageBox::Ok);
   wi_msg_box.exec();
 }
@@ -807,8 +797,8 @@ void UI_Mainwindow::save_screen_waveform()
       hdl=-1,
       yref[MAX_CHNS];
 
-  char str[512],
-       opath[MAX_PATHLEN];
+
+  QString errStr, opath;
 
   short *wavbuf[MAX_CHNS];
 
@@ -846,7 +836,7 @@ void UI_Mainwindow::save_screen_waveform()
 
   if(rec_len < 10LL)
   {
-    strlcpy(str, "Can not save waveforms when timebase < 1uSec.", 512);
+    errStr =  "Can not save waveforms when timebase < 1uSec.";
     goto OUT_ERROR;
   }
 
@@ -860,7 +850,7 @@ void UI_Mainwindow::save_screen_waveform()
     wavbuf[chn] = (short *)malloc(WAVFRM_MAX_BUFSZ * sizeof(short));
     if(wavbuf[chn] == NULL)
     {
-      strlcpy(str, "Malloc error.", 512);
+      errStr = "Malloc error.";
       goto OUT_ERROR;
     }
 
@@ -869,7 +859,7 @@ void UI_Mainwindow::save_screen_waveform()
 
   if(!chns)
   {
-    strlcpy(str, "No active channels.", 512);
+    errStr = "No active channels.";
     goto OUT_ERROR;
   }
 
@@ -882,9 +872,7 @@ void UI_Mainwindow::save_screen_waveform()
 
     usleep(20000);
 
-    snprintf(str, 512, ":WAV:SOUR CHAN%i", chn + 1);
-
-    tmc_write(str);
+    tmc_write(QString(":WAV:SOUR CHAN%i").arg(chn + 1).toLocal8Bit().constData());
 
     usleep(20000);
 
@@ -906,7 +894,8 @@ void UI_Mainwindow::save_screen_waveform()
 
     if(devparms.yinc[chn] < 1e-6)
     {
-      snprintf(str, 512, "Error, parameter \"YINC\" out of range: %e  line %i file %s", devparms.yinc[chn], __LINE__, __FILE__);
+      errStr = QString("Error, parameter \"YINC\" out of range: %1  line %2 file %3").arg(devparms.yinc[chn])
+          .arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
 
@@ -922,7 +911,8 @@ void UI_Mainwindow::save_screen_waveform()
 
     if((yref[chn] < 1) || (yref[chn] > 255))
     {
-      snprintf(str, 512, "Error, parameter \"YREF\" out of range: %i  line %i file %s", yref[chn], __LINE__, __FILE__);
+      errStr = QString("Error, parameter \"YREF\" out of range: %1  line %2 file %3").arg(yref[chn])
+          .arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
 
@@ -938,7 +928,8 @@ void UI_Mainwindow::save_screen_waveform()
 
     if((devparms.yor[chn] < -255) || (devparms.yor[chn] > 255))
     {
-      snprintf(str, 512, "Error, parameter \"YOR\" out of range: %i  line %i file %s", devparms.yor[chn], __LINE__, __FILE__);
+      errStr = QString("Error, parameter \"YOR\" out of range: %1  line %2 file %3").arg(devparms.yor[chn])
+          .arg(__LINE__).arg(__FILE__);
       goto OUT_ERROR;
     }
 
@@ -953,7 +944,7 @@ void UI_Mainwindow::save_screen_waveform()
     if(w_msg_box.exec() != QDialog::Accepted)
     {
       disconnect(&get_data_thrd, 0, 0, 0);
-      strlcpy(str, "Aborted by user.", 512);
+      errStr = "Aborted by user.";
       goto OUT_ERROR;
     }
 
@@ -962,19 +953,19 @@ void UI_Mainwindow::save_screen_waveform()
     n = get_data_thrd.get_num_bytes_rcvd();
     if(n < 0)
     {
-      strlcpy(str, "Can not read from device.", 512);
+      errStr =  "Can not read from device.";
       goto OUT_ERROR;
     }
 
     if(n > WAVFRM_MAX_BUFSZ)
     {
-      snprintf(str, 512, "Datablock too big for buffer: %i", n);
+      errStr = QString("Datablock too big for buffer: %1").arg(n);
       goto OUT_ERROR;
     }
 
     if(n < 16)
     {
-      strlcpy(str, "Not enough data in buffer.", 512);
+      errStr = "Not enough data in buffer.";
       goto OUT_ERROR;
     }
 
@@ -984,33 +975,32 @@ void UI_Mainwindow::save_screen_waveform()
     }
   }
 
-  opath[0] = 0;
-  if(recent_savedir[0]!=0)
+  if(!recent_savedir.isEmpty())
   {
-    strlcpy(opath, recent_savedir, MAX_PATHLEN);
-    strlcat(opath, "/", MAX_PATHLEN);
+    opath = recent_savedir += "/";
   }
-  strlcat(opath, "waveform.edf", MAX_PATHLEN);
+  opath +=  "waveform.edf";
 
-  strlcpy(opath, QFileDialog::getSaveFileName(this, "Save file", opath, "EDF files (*.edf *.EDF)").toLocal8Bit().data(), MAX_PATHLEN);
+  opath = QFileDialog::getSaveFileName(this, "Save file", opath, "EDF files (*.edf *.EDF)");
 
-  if(!strcmp(opath, ""))
+  // TODO: these exit looks strange, verify if this is correct
+  if(opath.isEmpty())
   {
     goto OUT_NORMAL;
   }
 
-  get_directory_from_path(recent_savedir, opath, MAX_PATHLEN);
+  recent_savedir = directory_from_path(recent_savedir);
 
-  hdl = edfopen_file_writeonly(opath, EDFLIB_FILETYPE_EDFPLUS, chns);
+  hdl = edfopen_file_writeonly(opath.toLocal8Bit().constData(), EDFLIB_FILETYPE_EDFPLUS, chns);
   if(hdl < 0)
   {
-    strlcpy(str, "Can not create EDF file.", 512);
+    errStr = "Can not create EDF file.";
     goto OUT_ERROR;
   }
 
   if(edf_set_datarecord_duration(hdl, rec_len / 100LL))
   {
-    snprintf(str, 512, "Can not set datarecord duration of EDF file: %lli", rec_len / 100LL);
+    errStr = QString("Can not set datarecord duration of EDF file: %1").arg(rec_len / 100LL);
     goto OUT_ERROR;
   }
 
@@ -1038,13 +1028,12 @@ void UI_Mainwindow::save_screen_waveform()
       edf_set_physical_minimum(hdl, j, 1000.0 * devparms.yinc[chn] * -32768.0 / 32.0);
       edf_set_physical_dimension(hdl, j, "mV");
     }
-    snprintf(str, 512, "CHAN%i", chn + 1);
-    edf_set_label(hdl, j, str);
+    edf_set_label(hdl, j, QString("CHAN%1").arg(chn + 1).toLocal8Bit().constData());
 
     j++;
   }
 
-  edf_set_equipment(hdl, devparms.modelname);
+  edf_set_equipment(hdl, devparms.modelname.toLocal8Bit().constData());
 
   for(chn=0; chn<MAX_CHNS; chn++)
   {
@@ -1055,7 +1044,7 @@ void UI_Mainwindow::save_screen_waveform()
 
     if(edfwrite_digital_short_samples(hdl, wavbuf[chn]))
     {
-      strlcpy(str, "A write error occurred.", 512);
+      errStr = "A write error occurred.";
       goto OUT_ERROR;
     }
   }
@@ -1079,7 +1068,7 @@ OUT_NORMAL:
 
 OUT_ERROR:
 
-  if(get_data_thrd.isFinished() != true)
+  if(!get_data_thrd.isFinished())
   {
     connect(&get_data_thrd, SIGNAL(finished()), &w_msg_box, SLOT(accept()));
     w_msg_box.setText("Waiting for thread to finish, please wait...");
@@ -1088,7 +1077,7 @@ OUT_ERROR:
 
   QMessageBox msgBox;
   msgBox.setIcon(QMessageBox::Critical);
-  msgBox.setText(str);
+  msgBox.setText(errStr);
   msgBox.exec();
 
   if(hdl >= 0)

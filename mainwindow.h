@@ -110,8 +110,8 @@ public:
   UI_Mainwindow();
   ~UI_Mainwindow();
 
-  char recent_dir[MAX_PATHLEN],
-       recent_savedir[MAX_PATHLEN];
+  char recent_dir[MAX_PATHLEN];
+  QString recent_savedir;
 
   void read_settings(void);
   void write_settings(void);
@@ -245,7 +245,7 @@ private:
 
   int parse_preamble(char *, int, struct waveform_preamble *, int);
   int get_metric_factor(double);
-  void get_device_model(const char *);
+  void get_device_model(const QString &);
   double get_stepsize_divide_by_1000(double);
   inline unsigned char reverse_bitorder_8(unsigned char);
   inline unsigned int reverse_bitorder_32(unsigned int);
@@ -491,6 +491,8 @@ private slots:
 protected:
   void closeEvent(QCloseEvent *);
 
+private:
+    void set_chan_probe(double val);
 };
 
 

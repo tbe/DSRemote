@@ -26,6 +26,8 @@
 */
 
 
+#include <QtCore>
+
 #include "screen_thread.h"
 
 
@@ -441,7 +443,7 @@ void screen_thread::run()
 {
   int i, j, k, n=0, chns=0, line, cmd_sent=0;
 
-  char str[512];
+  QString err_str;
 
   double y_incr, binsz;
 
@@ -484,7 +486,7 @@ void screen_thread::run()
 
       if(tmc_read() < 1)
       {
-        printf("Can not read from device.\n");
+        qDebug() << "Can not read from device.";
         line = __LINE__;
         goto OUT_ERROR;
       }
@@ -500,14 +502,14 @@ void screen_thread::run()
 
       if(tmc_write(":TRIG:EDG:LEV?") != 14)
       {
-        printf("Can not write to device.\n");
+        qDebug() << "Can not write to device.";
         line = __LINE__;
         goto OUT_ERROR;
       }
 
       if(tmc_read() < 1)
       {
-        printf("Can not read from device.\n");
+        qDebug() << "Can not read from device.";
         line = __LINE__;
         goto OUT_ERROR;
       }
@@ -522,14 +524,14 @@ void screen_thread::run()
 
         if(tmc_write(":TIM:DEL:OFFS?") != 14)
         {
-          printf("Can not write to device.\n");
+          qDebug() << "Can not write to device.";
           line = __LINE__;
           goto OUT_ERROR;
         }
 
         if(tmc_read() < 1)
         {
-          printf("Can not read from device.\n");
+          qDebug() << "Can not read from device.";
           line = __LINE__;
           goto OUT_ERROR;
         }
@@ -540,14 +542,14 @@ void screen_thread::run()
 
         if(tmc_write(":TIM:DEL:SCAL?") != 14)
         {
-          printf("Can not write to device.\n");
+          qDebug() << "Can not write to device.";
           line = __LINE__;
           goto OUT_ERROR;
         }
 
         if(tmc_read() < 1)
         {
-          printf("Can not read from device.\n");
+          qDebug() << "Can not read from device.";
           line = __LINE__;
           goto OUT_ERROR;
         }
@@ -577,7 +579,7 @@ void screen_thread::run()
         {
           if(tmc_write(":MATH:FFT:HSC?") != 14)
           {
-            printf("Can not write to device.\n");
+            qDebug() << "Can not write to device.";
             line = __LINE__;
             goto OUT_ERROR;
           }
@@ -585,7 +587,7 @@ void screen_thread::run()
 
         if(tmc_read() < 1)
         {
-          printf("Can not read from device.\n");
+          qDebug() << "Can not read from device.";
           line = __LINE__;
           goto OUT_ERROR;
         }
@@ -606,7 +608,7 @@ void screen_thread::run()
         {
           if(tmc_write(":MATH:FFT:HCEN?") != 15)
           {
-            printf("Can not write to device.\n");
+            qDebug() << "Can not write to device.";
             line = __LINE__;
             goto OUT_ERROR;
           }
@@ -614,7 +616,7 @@ void screen_thread::run()
 
         if(tmc_read() < 1)
         {
-          printf("Can not read from device.\n");
+          qDebug() << "Can not read from device.";
           line = __LINE__;
           goto OUT_ERROR;
         }
@@ -729,39 +731,37 @@ void screen_thread::run()
 
 ///////////////////////////////////////////////////////////
 
-      snprintf(str, 512, ":WAV:SOUR CHAN%i", i + 1);
-
-      if(tmc_write(str) != 15)
+      if(tmc_write(QString(":WAV:SOUR CHAN%1").arg(i+1).toLocal8Bit().constData()) != 15)
       {
-        printf("Can not write to device.\n");
+        qDebug() << "Can not write to device";
         line = __LINE__;
         goto OUT_ERROR;
       }
 
       if(tmc_write(":WAV:FORM BYTE") != 14)
       {
-        printf("Can not write to device.\n");
+        qDebug() << "Can not write to device";
         line = __LINE__;
         goto OUT_ERROR;
       }
 
       if(tmc_write(":WAV:MODE NORM") != 14)
       {
-        printf("Can not write to device.\n");
+        qDebug() << "Can not write to device";
         line = __LINE__;
         goto OUT_ERROR;
       }
 
       if(tmc_write(":WAV:XOR?") != 9)
       {
-        printf("Can not write to device.\n");
+        qDebug() << "Can not write to device";
         line = __LINE__;
         goto OUT_ERROR;
       }
 
       if(tmc_read() < 1)
       {
-        printf("Can not read from device.\n");
+        qDebug() << "Can not read fromdevice";
         line = __LINE__;
         goto OUT_ERROR;
       }
@@ -770,7 +770,7 @@ void screen_thread::run()
 
       if(tmc_write(":WAV:DATA?") != 10)
       {
-        printf("Can not write to device.\n");
+        qDebug() << "Can not write to device";
         line = __LINE__;
         goto OUT_ERROR;
       }
@@ -779,14 +779,14 @@ void screen_thread::run()
 
       if(n < 0)
       {
-        printf("Can not read from device.\n");
+        qDebug() << "Can not read fromdevice";
         line = __LINE__;
         goto OUT_ERROR;
       }
 
       if(n > WAVFRM_MAX_BUFSZ)
       {
-        printf("Datablock too big for buffer.\n");
+        qDebug() << "Datablock too big for buffer.";
         line = __LINE__;
         goto OUT_ERROR;
       }
@@ -872,16 +872,16 @@ OUT_ERROR:
 
   params.result = TMC_THRD_RESULT_NONE;
 
+  // TODO: uhm, creating a string, not using it? Is there missing a box?
+  /*
   snprintf(str, 512, "An error occurred while reading screen data from device.\n"
                "File %s line %i", __FILE__, line);
-
+  */
   h_busy = 0;
 
   params.error_line = line;
 
   params.error_stat = -1;
-
-  return;
 }
 
 

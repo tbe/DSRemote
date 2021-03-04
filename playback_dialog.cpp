@@ -276,93 +276,64 @@ void UI_playback_window::toggle_playback()
 
 void UI_playback_window::rec_fend_spinbox_changed(int fend)
 {
-  char str[512];
+  mainwindow->statusLabel->setText(QString("Recording frame end: %1").arg(fend));
 
-  snprintf(str, 512, "Recording frame end: %i", fend);
-
-  mainwindow->statusLabel->setText(str);
-
-  snprintf(str, 512, ":FUNC:WREC:FEND %i", fend);
-
-  mainwindow->set_cue_cmd(str);
+  mainwindow->set_cue_cmd(QString(":FUNC:WREC:FEND %1").arg(fend).toLocal8Bit().constData());
 }
 
 
 void UI_playback_window::rec_fint_spinbox_changed(double fint)
 {
-  char str[512];
+  // why should we do suffix conversion here? The value is always 3 ...
+  //  TODO: looks like switched parameters
+  mainwindow->statusLabel->setText(QString("Recording frame interval: %1S").arg(suffixed_metric_value(fint,3 )));
+  //mainwindow->statusLabel->setText(QString("Recording frame interval: %1S").arg(3));
 
-  strlcpy(str, "Recording frame interval: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), 3, fint, 512);
-
-  strlcat(str, "S", 512);
-
-  mainwindow->statusLabel->setText(str);
-
+  QString cmd;
   if(devparms->modelserie == 1)
   {
-    snprintf(str, 512, ":FUNC:WREC:FINT %e", fint);
+    cmd = ":FUNC:WREC:FINT %1";
   }
   else
   {
-    snprintf(str, 512, ":FUNC:WREC:INT %e", fint);
+    cmd = ":FUNC:WREC:INT %1";
   }
 
-  mainwindow->set_cue_cmd(str);
+  mainwindow->set_cue_cmd(cmd.arg(fint).toLocal8Bit().constData());
 }
 
 
 void UI_playback_window::rep_fstart_spinbox_changed(int fstart)
 {
-  char str[512];
+  mainwindow->statusLabel->setText(QString("Playback frame start: %1").arg(fstart));
 
-  snprintf(str, 512, "Playback frame start: %i", fstart);
-
-  mainwindow->statusLabel->setText(str);
-
-  snprintf(str, 512, ":FUNC:WREP:FST %i", fstart);
-
-  mainwindow->set_cue_cmd(str);
+  mainwindow->set_cue_cmd(QString(":FUNC:WREP:FST %1").arg(fstart).toLocal8Bit().constData());
 }
 
 
 void UI_playback_window::rep_fend_spinbox_changed(int fend)
 {
-  char str[512];
+  mainwindow->statusLabel->setText(QString("Playback frame end: %1").arg(fend));
 
-  snprintf(str, 512, "Playback frame end: %i", fend);
-
-  mainwindow->statusLabel->setText(str);
-
-  snprintf(str, 512, ":FUNC:WREP:FEND %i", fend);
-
-  mainwindow->set_cue_cmd(str);
+  mainwindow->set_cue_cmd(QString(":FUNC:WREP:FEND %1").arg(fend).toLocal8Bit().constData());
 }
 
 
 void UI_playback_window::rep_fint_spinbox_changed(double fint)
 {
-  char str[512];
+  mainwindow->statusLabel->setText(QString("Playback frame interval: %1S").arg(suffixed_metric_value(fint,3 )));
 
-  strlcpy(str, "Playback frame interval: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), 3, fint, 512);
-
-  strlcat(str, "S", 512);
-
-  mainwindow->statusLabel->setText(str);
-
+  QString cmd;
   if(devparms->modelserie == 1)
   {
-    snprintf(str, 512, ":FUNC:WREP:FINT %e", fint);
+    cmd = ":FUNC:WREP:FINT %1";
   }
   else
   {
-    snprintf(str, 512, ":FUNC:WREP:INT %e", fint);
+    cmd = ":FUNC:WREP:INT %1";
   }
 
-  mainwindow->set_cue_cmd(str);
+  mainwindow->set_cue_cmd(cmd.arg(fint).toLocal8Bit().constData());
 }
 
 

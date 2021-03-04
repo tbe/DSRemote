@@ -30,6 +30,7 @@
 #define DSR_GLOBAL_H
 
 #include <pthread.h>
+#include <QString>
 
 #include "third_party/kiss_fft/kiss_fftr.h"
 
@@ -116,15 +117,15 @@ struct device_settings
 {
   int connected;
   int connectiontype;           // 0=USB, 1=LAN
-  char modelname[128];
-  char serialnr[128];
-  char softwvers[128];
+  QString modelname;
+  QString serialnr;
+  QString softwvers;
   int modelserie;               // 1=DS1000, 2=DS2000, etc.
   int hordivisions;             // number of horizontal divisions, 12 or 14
   int vertdivisions;            // number of vertical divisions, 8 or 10
   int use_extra_vertdivisions;  // If 1: use 10 vertical divisions instead of 8, DS1000Z only
 
-  char hostname[128];
+  QString hostname;
 
   int screentimerival;
 

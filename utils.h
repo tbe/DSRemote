@@ -30,12 +30,6 @@
 #ifndef UTILS_INCLUDED
 #define UTILS_INCLUDED
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,6 +37,15 @@ extern "C" {
 #include <math.h>
 
 
+#ifdef __cplusplus
+#include <QString>
+
+QString suffixed_metric_value(double value, int decimals);
+QString directory_from_path(const QString &path);
+
+// legacy, to be removed
+extern "C" {
+#endif
 void remove_trailing_spaces(char *);
 void remove_leading_spaces(char *);
 void remove_trailing_zeros(char *);

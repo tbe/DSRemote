@@ -16,6 +16,7 @@ find_package(Qt5 COMPONENTS Core Widgets Network Gui REQUIRED)
 add_executable(dsremote
         main.cpp
         about_dialog.cpp
+        utils.cpp
         utils.c
         connection.cpp
         tmc_dev.c

@@ -26,11 +26,12 @@
 */
 
 
+#include <QtCore>
 
 
 void UI_Mainwindow::test_timer_handler()
 {
-  printf("scr_update_cntr is: %u\n", waveForm->scr_update_cntr);
+  qDebug() << "scr_update_cntr is: " << waveForm->scr_update_cntr;
 
   waveForm->scr_update_cntr = 0;
 }
@@ -44,7 +45,7 @@ void UI_Mainwindow::label_timer_handler()
 
 void UI_Mainwindow::navDial_timer_handler()
 {
-  if(navDial->isSliderDown() == true)
+  if(navDial->isSliderDown())
   {
     navDialChanged(navDial->value());
   }
@@ -54,7 +55,7 @@ void UI_Mainwindow::navDial_timer_handler()
 
     navDialFunc = NAV_DIAL_FUNC_NONE;
 
-    if(adjdial_timer->isActive() == false)
+    if(!adjdial_timer->isActive())
     {
       adjDialFunc = ADJ_DIAL_FUNC_NONE;
     }
@@ -64,8 +65,6 @@ void UI_Mainwindow::navDial_timer_handler()
 
 void UI_Mainwindow::adjdial_timer_handler()
 {
-  char str[512];
-
   adjdial_timer->stop();
 
   adjDialLabel->setStyleSheet(def_stylesh);
@@ -76,17 +75,9 @@ void UI_Mainwindow::adjdial_timer_handler()
 
   if(adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF)
   {
-    strlcpy(str, "Trigger holdoff: ", 512);
+    statusLabel->setText(QString("Trigger holdoff: %1s").arg(suffixed_metric_value(devparms.triggerholdoff, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.triggerholdoff, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TRIG:HOLD %e", devparms.triggerholdoff);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TRIG:HOLD %1").arg(devparms.triggerholdoff).toLocal8Bit().constData());
 
     if((devparms.modelserie == 2) || (devparms.modelserie == 6))
     {
@@ -103,13 +94,9 @@ void UI_Mainwindow::adjdial_timer_handler()
   }
   else if(adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG)
     {
-      snprintf(str, 512, "Acquire averages: %i", devparms.acquireaverages);
+      statusLabel->setText(QString("Acquire averages: %1").arg(devparms.acquireaverages));
 
-      statusLabel->setText(str);
-
-      snprintf(str, 512, ":ACQ:AVER %i", devparms.acquireaverages);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString(":ACQ:AVER %1").arg(devparms.acquireaverages).toLocal8Bit().constData());
     }
 
   adjDialFunc = ADJ_DIAL_FUNC_NONE;
@@ -136,26 +123,24 @@ void UI_Mainwindow::scrn_timer_handler()
 
 void UI_Mainwindow::horPosDial_timer_handler()
 {
-  char str[512];
 
+  QString str;
   if(devparms.timebasedelayenable)
   {
-    snprintf(str, 512, ":TIM:DEL:OFFS %e", devparms.timebasedelayoffset);
+    str = QString(":TIM:DEL:OFFS %1").arg(devparms.timebasedelayoffset);
   }
   else
   {
-    snprintf(str, 512, ":TIM:OFFS %e", devparms.timebaseoffset);
+    str = QString(":TIM:OFFS %1").arg(devparms.timebaseoffset);
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(str.toLocal8Bit().constData());
 }
 
 
 void UI_Mainwindow::trigAdjDial_timer_handler()
 {
   int chn;
-
-  char str[512];
 
   chn = devparms.triggeredgesource;
 
@@ -164,9 +149,7 @@ void UI_Mainwindow::trigAdjDial_timer_handler()
     return;
   }
 
-  snprintf(str, 512, ":TRIG:EDG:LEV %e", devparms.triggeredgelevel[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":TRIG:EDG:LEV %1").arg(devparms.triggeredgelevel[chn]).toLocal8Bit().constData());
 }
 
 
@@ -174,8 +157,6 @@ void UI_Mainwindow::vertOffsDial_timer_handler()
 {
   int chn;
 
-  char str[512];
-
   if(devparms.activechannel < 0)
   {
     return;
@@ -183,26 +164,24 @@ void UI_Mainwindow::vertOffsDial_timer_handler()
 
   chn = devparms.activechannel;
 
-  snprintf(str, 512, ":CHAN%i:OFFS %e", chn + 1, devparms.chanoffset[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:OFFS %2").arg(chn+1).arg(devparms.chanoffset[chn]).toLocal8Bit().constData());
 }
 
 
 void UI_Mainwindow::horScaleDial_timer_handler()
 {
-  char str[512];
+  QString str;
 
   if(devparms.timebasedelayenable)
   {
-    snprintf(str, 512, ":TIM:DEL:SCAL %e", devparms.timebasedelayscale);
+    str = QString(":TIM:DEL:SCAL %1").arg(devparms.timebasedelayscale);
   }
   else
   {
-    snprintf(str, 512, ":TIM:SCAL %e", devparms.timebasescale);
+    str = QString(":TIM:SCAL %1").arg(devparms.timebasescale);
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(str.toLocal8Bit().constData());
 }
 
 
@@ -210,8 +189,6 @@ void UI_Mainwindow::vertScaleDial_timer_handler()
 {
   int chn;
 
-  char str[512];
-
   if(devparms.activechannel < 0)
   {
     return;
@@ -219,9 +196,7 @@ void UI_Mainwindow::vertScaleDial_timer_handler()
 
   chn = devparms.activechannel;
 
-  snprintf(str, 512, ":CHAN%i:SCAL %e", chn + 1, devparms.chanscale[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().constData());
 }
 
 

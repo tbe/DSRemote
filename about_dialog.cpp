@@ -25,22 +25,17 @@
 ***************************************************************************
 */
 
-
-
-
 #include "about_dialog.h"
-
-
 
 UI_Aboutwindow::UI_Aboutwindow()
 {
-  char str[512];
 
-  strlcpy(str, " QT version at runtime is ", 512);
-  strlcat(str, qVersion(), 512);
-  strlcat(str, "\n QT version at compiletime is ", 512);
-  strlcat(str, QT_VERSION_STR, 512);
-  strlcat(str, "\n Compiled on " __DATE__ " " __TIME__, 512);
+
+  auto str = QString(" QT version at runtime is %1\n QT version at compiletime is %2\n Compiled on %3 %4")
+      .arg(qVersion())
+      .arg(QT_VERSION_STR)
+      .arg(__DATE__)
+      .arg(__TIME__);
 
   AboutDialog = new QDialog;
 

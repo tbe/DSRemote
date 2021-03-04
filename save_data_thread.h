@@ -56,7 +56,7 @@ public:
   save_data_thread(int);
 
   int get_error_num(void);
-  void get_error_str(char *, int);
+  QString get_error_str();
   int get_num_bytes_rcvd(void);
   void init_save_memory_edf_file(struct device_settings *devp, int,
                                  int, int, short **wav);
@@ -70,7 +70,8 @@ private:
       datrecs,
       smps_per_record;
 
-  char err_str[4096];
+  QString err_str;
+  // char err_str[4096];
 
   struct device_settings *devparms;
 

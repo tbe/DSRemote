@@ -151,13 +151,13 @@ private:
   void drawTrigCenterArrow(QPainter *, int, int);
   void drawChanLabel(QPainter *, int, int, int);
   void drawTopLabels(QPainter *);
-  void paintLabel(QPainter *, int, int, int, int, const char *, QColor);
+  void paintLabel(QPainter *, int, int, int, int, const QString&, QColor);
   void paintCounterLabel(QPainter *, int, int);
   void paintPlaybackLabel(QPainter *, int, int);
   void drawFFT(QPainter *, int, int);
   void drawfpsLabel(QPainter *, int, int);
   void draw_decoder(QPainter *, int, int);
-  int ascii_decode_control_char(char, char *, int);
+  QString ascii_decode_control_char(char);
 
   struct device_settings *devparms;
 

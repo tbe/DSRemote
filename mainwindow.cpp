@@ -45,9 +45,8 @@ void UI_Mainwindow::open_connection()
 {
   int i, j, n, len;
 
-  char str[4096] = {""},
-       dev_str[256] = {""},
-       resp_str[2048] = {""},
+  QString err_str, dev_str;
+  char resp_str[2048] = {""},
        *ptr;
 
   QSettings settings;
@@ -66,9 +65,9 @@ void UI_Mainwindow::open_connection()
     return;
   }
 
-  strlcpy(str, settings.value("connection/type", "USB").toString().toLatin1().data(), 4096);
+  auto connTypeStr =settings.value("connection/type", "USB").toString();
 
-  if(!strcmp(str, "LAN"))
+  if(connTypeStr == "LAN")
   {
     devparms.connectiontype = 1;
   }
@@ -79,41 +78,42 @@ void UI_Mainwindow::open_connection()
 
   if(devparms.connectiontype == 0)  // USB
   {
-    strlcpy(dev_str, settings.value("connection/device", "/dev/usbtmc0").toString().toLatin1().data(), 256);
+    dev_str = settings.value("connection/device", "/dev/usbtmc0").toString();
 
-    if(!strcmp(dev_str, ""))
+    if(dev_str.isEmpty())
     {
-      strlcpy(dev_str, "/dev/usbtmc0", 256);
+      dev_str = "/dev/usbtmc0";
 
       settings.setValue("connection/device", dev_str);
     }
 
-    device = tmc_open_usb(dev_str);
+    device = tmc_open_usb(dev_str.toLocal8Bit().constData());
     if(device == NULL)
     {
-      snprintf(str, 4096, "Can not open device %s", dev_str);
+      err_str= QString("Can not open device %1").arg(dev_str);
       goto OC_OUT_ERROR;
     }
   }
 
   if(devparms.connectiontype == 1)  // LAN
   {
-    strlcpy(devparms.hostname, settings.value("connection/hostname", "").toString().toLatin1().data(), 128);
+    devparms.hostname = settings.value("connection/hostname", "").toString();
 
-    if(strlen(devparms.hostname))
+    if(!devparms.hostname.isEmpty())
     {
-      strlcpy(dev_str, devparms.hostname, 256);
+      dev_str = devparms.hostname;
     }
     else
     {
-      strlcpy(dev_str, settings.value("connection/ip", "192.168.1.100").toString().toLatin1().data(), 256);
-
-      if(!strcmp(dev_str, ""))
+      dev_str = settings.value("connection/ip", "192.168.1.100").toString();
+      if(dev_str.isEmpty())
       {
-        snprintf(str, 4096, "No IP address or hostname set");
+        err_str = "No IP address or hostname set";
         goto OC_OUT_ERROR;
       }
 
+      // This could also be an Hostname, we should verify this a sane way. Disabling for now
+      /*
       len = strlen(dev_str);
 
       if(len < 7)
@@ -121,6 +121,7 @@ void UI_Mainwindow::open_connection()
         snprintf(str, 4096, "No IP address set");
         goto OC_OUT_ERROR;
       }
+      */
 
       int cf = 0;
 
@@ -160,13 +161,11 @@ void UI_Mainwindow::open_connection()
 
     statusLabel->setText("Trying to connect...");
 
-    snprintf(str, 4096, "Trying to connect to %s", dev_str);
-
     msgBox.setIcon(QMessageBox::NoIcon);
-    msgBox.setText(str);
+    msgBox.setText(QString("Trying to connect to %1").arg(dev_str));
     msgBox.addButton("Abort", QMessageBox::RejectRole);
 
-    lan_cn_thrd.set_device_address(dev_str);
+    lan_cn_thrd.set_device_address(dev_str.toLocal8Bit().constData());
     connect(&lan_cn_thrd, SIGNAL(finished()), &msgBox, SLOT(accept()));
     lan_cn_thrd.start();
 
@@ -175,7 +174,7 @@ void UI_Mainwindow::open_connection()
       statusLabel->setText("Connection aborted");
       lan_cn_thrd.terminate();
       lan_cn_thrd.wait(20000);
-      snprintf(str, 4096, "Connection aborted");
+      err_str = "Connection aborted";
       disconnect(&lan_cn_thrd, 0, 0, 0);
       goto OC_OUT_ERROR;
     }
@@ -186,15 +185,16 @@ void UI_Mainwindow::open_connection()
     if(device == NULL)
     {
       statusLabel->setText("Connection failed");
-      snprintf(str, 4096, "Can not open connection to %s", dev_str);
+      err_str = QString("Can not open connection to %1").arg(dev_str);
       goto OC_OUT_ERROR;
     }
   }
 
+  // TODO: this should not be handled inside the the mainwindow class, move it to a seperate device class later on
   if(tmc_write("*IDN?") != 5)
 //  if(tmc_write("*IDN?;:SYST:ERR?") != 16)  // This is a fix for the broken *IDN? command in older fw version
   {
-    snprintf(str, 4096, "Can not write to device %s", dev_str);
+    err_str = QString("Can not write to device %1").arg(dev_str);
     goto OC_OUT_ERROR;
   }
 
@@ -202,7 +202,7 @@ void UI_Mainwindow::open_connection()
 
   if(n < 0)
   {
-    snprintf(str, 4096, "Can not read from device %s", dev_str);
+    err_str = QString("Can not read from device %1").arg(dev_str);
     goto OC_OUT_ERROR;
   }
 
@@ -217,48 +217,48 @@ void UI_Mainwindow::open_connection()
   ptr = strtok(resp_str, ",");
   if(ptr == NULL)
   {
-    snprintf(str, 1024, "Received an unknown identification string from device:\n\n%s\n ", device->buf);
+    err_str = QString("Received an unknown identification string from device:\n\n%1").arg(device->buf);
     goto OC_OUT_ERROR;
   }
 
   if(strcmp(ptr, "RIGOL TECHNOLOGIES"))
   {
-    snprintf(str, 1024, "Received an unknown identification string from device:\n\n%s\n ", device->buf);
+    err_str = QString("Received an unknown identification string from device:\n\n%1").arg(device->buf);
     goto OC_OUT_ERROR;
   }
 
   ptr = strtok(NULL, ",");
   if(ptr == NULL)
   {
-    snprintf(str, 1024, "Received an unknown identification string from device:\n\n%s\n ", device->buf);
+    err_str = QString("Received an unknown identification string from device:\n\n%1").arg(device->buf);
     goto OC_OUT_ERROR;
   }
 
-  get_device_model(ptr);
+  get_device_model(QString::fromLocal8Bit(ptr));
 
   if((!devparms.channel_cnt) || (!devparms.bandwidth))
   {
-    snprintf(str, 1024, "Received an unknown identification string from device:\n\n%s\n ", device->buf);
+    err_str = QString("Received an unknown identification string from device:\n\n%1").arg(device->buf);
     goto OC_OUT_ERROR;
   }
 
   ptr = strtok(NULL, ",");
   if(ptr == NULL)
   {
-    snprintf(str, 1024, "Received an unknown identification string from device:\n\n%s\n ", device->buf);
+    err_str = QString("Received an unknown identification string from device:\n\n%1").arg(device->buf);
     goto OC_OUT_ERROR;
   }
 
-  strlcpy(devparms.serialnr, ptr, 128);
+  devparms.serialnr = QString::fromLocal8Bit(ptr);
 
   ptr = strtok(NULL, ",");
   if(ptr == NULL)
   {
-    snprintf(str, 1024, "Received an unknown identification string from device:\n\n%s\n ", device->buf);
+    err_str = QString("Received an unknown identification string from device:\n\n%1").arg(device->buf);
     goto OC_OUT_ERROR;
   }
 
-  strlcpy(devparms.softwvers, ptr, 128);
+  devparms.softwvers = QString::fromLocal8Bit(ptr);
 
   for(i=0; ; i++)
   {
@@ -299,7 +299,7 @@ void UI_Mainwindow::open_connection()
 
   if(get_device_settings())
   {
-    strlcpy(str, "Can not read device settings", 4096);
+    err_str = "Can not read device settings";
 
     goto OC_OUT_ERROR;
   }
@@ -404,12 +404,8 @@ void UI_Mainwindow::open_connection()
   connect(stopButton,      SIGNAL(clicked()), this, SLOT(stopButtonClicked()));
   connect(recordButton,    SIGNAL(clicked()), this, SLOT(recordButtonClicked()));
 
-  snprintf(str, 4096, PROGRAM_NAME " " PROGRAM_VERSION "   %s   %s   %s",
-          devparms.serialnr, devparms.softwvers, dev_str);
-//   sprintf(str, PROGRAM_NAME " " PROGRAM_VERSION "   %s   %s",
-//           devparms.softwvers, dev_str);
-
-  setWindowTitle(str);
+  setWindowTitle(QString("%1 %2   %3   %4   %5")
+    .arg(PROGRAM_NAME).arg(PROGRAM_VERSION).arg(devparms.serialnr).arg(devparms.softwvers).arg(dev_str));
 
   statusLabel->setText("Connected");
 
@@ -437,7 +433,7 @@ OC_OUT_ERROR:
 
   QMessageBox mesgbox;
   mesgbox.setIcon(QMessageBox::Critical);
-  mesgbox.setText(str);
+  mesgbox.setText(err_str);
   mesgbox.exec();
 
   close_connection();
@@ -472,7 +468,7 @@ void UI_Mainwindow::close_connection()
 
   setWindowTitle(PROGRAM_NAME " " PROGRAM_VERSION);
 
-  strlcpy(devparms.modelname, "-----", 128);
+  devparms.modelname = "-----";
 
   adjDialFunc = ADJ_DIAL_FUNC_NONE;
   navDialFunc = NAV_DIAL_FUNC_NONE;
@@ -586,8 +582,6 @@ int UI_Mainwindow::get_device_settings(int delay)
 {
   int chn;
 
-  char str[4096] = {""};
-
   statusLabel->setText("Reading instrument settings...");
 
   read_settings_thread rd_set_thrd;
@@ -608,7 +602,7 @@ int UI_Mainwindow::get_device_settings(int delay)
     statusLabel->setText("Reading settings aborted");
     rd_set_thrd.terminate();
     rd_set_thrd.wait(20000);
-    snprintf(str, 4096, "Reading settings aborted");
+    // err_str = "Reading settings aborted";
     disconnect(&rd_set_thrd, 0, 0, 0);
     return -1;
   }
@@ -618,11 +612,11 @@ int UI_Mainwindow::get_device_settings(int delay)
   if(rd_set_thrd.get_error_num() != 0)
   {
     statusLabel->setText("Error while reading settings");
-    rd_set_thrd.get_error_str(str, 4096);
     msgBox.setIcon(QMessageBox::Critical);
-    msgBox.setText(str);
+    msgBox.setText(rd_set_thrd.get_error_str());
     msgBox.exec();
-    strlcpy(str, "Can not read settings from device", 4096);
+    // TODO: nothing is done with the string here ...
+    // err_str = "Can not read settings from device";
     return -1;
   }
 
@@ -782,6 +776,7 @@ int UI_Mainwindow::parse_preamble(char *str, int sz, struct waveform_preamble *w
 }
 
 
+// This is duplicate code, we have something like this in utils.cpp
 int UI_Mainwindow::get_metric_factor(double value)
 {
   int suffix=0;
@@ -862,7 +857,9 @@ double UI_Mainwindow::get_stepsize_divide_by_1000(double val)
 }
 
 
-void UI_Mainwindow::get_device_model(const char *str)
+// TODO: this could handled "kernel-like": A struct type just for these parameters,
+//  and a const struct for each device type
+void UI_Mainwindow::get_device_model(const QString &str)
 {
   devparms.channel_cnt = 0;
 
@@ -872,7 +869,7 @@ void UI_Mainwindow::get_device_model(const char *str)
 
   devparms.vertdivisions = 8;
 
-  if(!strcmp(str, "DS6104"))
+  if(str == "DS6104")
   {
     devparms.channel_cnt = 4;
 
@@ -881,7 +878,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 6;
   }
 
-  if(!strcmp(str, "DS6064"))
+  if(str == "DS6064")
   {
     devparms.channel_cnt = 4;
 
@@ -890,7 +887,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 6;
   }
 
-  if(!strcmp(str, "DS6102"))
+  if(str == "DS6102")
   {
     devparms.channel_cnt = 2;
 
@@ -899,7 +896,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 6;
   }
 
-  if(!strcmp(str, "DS6062"))
+  if(str == "DS6062")
   {
     devparms.channel_cnt = 2;
 
@@ -908,7 +905,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 6;
   }
 
-  if(!strcmp(str, "DS4012"))
+  if(str == "DS4012")
   {
     devparms.channel_cnt = 2;
 
@@ -917,7 +914,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4014"))
+  if(str == "DS4014")
   {
     devparms.channel_cnt = 4;
 
@@ -926,7 +923,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4022"))
+  if(str == "DS4022")
   {
     devparms.channel_cnt = 2;
 
@@ -935,7 +932,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4024"))
+  if(str == "DS4024")
   {
     devparms.channel_cnt = 4;
 
@@ -944,7 +941,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4032"))
+  if(str == "DS4032")
   {
     devparms.channel_cnt = 2;
 
@@ -953,7 +950,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4034"))
+  if(str == "DS4034")
   {
     devparms.channel_cnt = 4;
 
@@ -962,7 +959,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4052"))
+  if(str == "DS4052")
   {
     devparms.channel_cnt = 2;
 
@@ -971,7 +968,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS4054"))
+  if(str == "DS4054")
   {
     devparms.channel_cnt = 4;
 
@@ -980,7 +977,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "MSO4012"))
+  if(str == "MSO4012")
   {
     devparms.channel_cnt = 2;
 
@@ -989,7 +986,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "MSO4024"))
+  if(str == "MSO4024")
   {
     devparms.channel_cnt = 4;
 
@@ -998,7 +995,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 4;
   }
 
-  if(!strcmp(str, "DS2072A"))
+  if(str == "DS2072A")
   {
     devparms.channel_cnt = 2;
 
@@ -1007,7 +1004,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2072A-S"))
+  if(str == "DS2072A-S")
   {
     devparms.channel_cnt = 2;
 
@@ -1016,7 +1013,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2102"))
+  if(str == "DS2102")
   {
     devparms.channel_cnt = 2;
 
@@ -1025,7 +1022,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2102A"))
+  if(str == "DS2102A")
   {
     devparms.channel_cnt = 2;
 
@@ -1034,7 +1031,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2102A-S"))
+  if(str == "DS2102A-S")
   {
     devparms.channel_cnt = 2;
 
@@ -1043,7 +1040,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2202"))
+  if(str == "DS2202")
   {
     devparms.channel_cnt = 2;
 
@@ -1052,7 +1049,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2202A"))
+  if(str == "DS2202A")
   {
     devparms.channel_cnt = 2;
 
@@ -1061,7 +1058,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2202A-S"))
+  if(str == "DS2202A-S")
   {
     devparms.channel_cnt = 2;
 
@@ -1070,7 +1067,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2302"))
+  if(str == "DS2302")
   {
     devparms.channel_cnt = 2;
 
@@ -1079,7 +1076,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2302A"))
+  if(str == "DS2302A")
   {
     devparms.channel_cnt = 2;
 
@@ -1088,7 +1085,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS2302A-S"))
+  if(str == "DS2302A-S")
   {
     devparms.channel_cnt = 2;
 
@@ -1097,7 +1094,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 2;
   }
 
-  if(!strcmp(str, "DS1054Z"))
+  if(str == "DS1054Z")
   {
     devparms.channel_cnt = 4;
 
@@ -1106,7 +1103,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1074Z"))
+  if(str == "DS1074Z")
   {
     devparms.channel_cnt = 4;
 
@@ -1115,7 +1112,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1074Z-S"))
+  if(str == "DS1074Z-S")
   {
     devparms.channel_cnt = 4;
 
@@ -1124,7 +1121,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1074Z Plus"))
+  if(str == "DS1074Z Plus")
   {
     devparms.channel_cnt = 4;
 
@@ -1133,7 +1130,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1074Z-S Plus"))
+  if(str == "DS1074Z-S Plus")
   {
     devparms.channel_cnt = 4;
 
@@ -1142,7 +1139,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1104Z"))
+  if(str == "DS1104Z")
   {
     devparms.channel_cnt = 4;
 
@@ -1151,7 +1148,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1104Z-S"))
+  if(str == "DS1104Z-S")
   {
     devparms.channel_cnt = 4;
 
@@ -1160,7 +1157,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1104Z Plus"))
+  if(str == "DS1104Z Plus")
   {
     devparms.channel_cnt = 4;
 
@@ -1169,7 +1166,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1104Z-S Plus"))
+  if(str == "DS1104Z-S Plus")
   {
     devparms.channel_cnt = 4;
 
@@ -1178,7 +1175,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "MSO1074Z"))
+  if(str == "MSO1074Z")
   {
     devparms.channel_cnt = 4;
 
@@ -1187,7 +1184,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "MSO1104Z"))
+  if(str == "MSO1104Z")
   {
     devparms.channel_cnt = 4;
 
@@ -1196,7 +1193,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "MSO1074Z-S"))
+  if(str == "MSO1074Z-S")
   {
     devparms.channel_cnt = 4;
 
@@ -1205,7 +1202,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "MSO1104Z-S"))
+  if(str == "MSO1104Z-S")
   {
     devparms.channel_cnt = 4;
 
@@ -1214,7 +1211,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1202Z-E"))
+  if(str == "DS1202Z-E")
   {
     devparms.channel_cnt = 2;
 
@@ -1223,7 +1220,7 @@ void UI_Mainwindow::get_device_model(const char *str)
     devparms.modelserie = 1;
   }
 
-  if(!strcmp(str, "DS1102Z-E"))
+  if(str == "DS1102Z-E")
   {
     devparms.channel_cnt = 2;
 
@@ -1241,15 +1238,13 @@ void UI_Mainwindow::get_device_model(const char *str)
 
   if(devparms.channel_cnt && devparms.bandwidth && devparms.modelserie)
   {
-    strlcpy(devparms.modelname, str, 128);
+    devparms.modelname = str;
   }
 }
 
 
 void UI_Mainwindow::former_page()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1279,13 +1274,7 @@ void UI_Mainwindow::former_page()
       devparms.timebasedelayoffset = -(((devparms.hordivisions / 2) * devparms.timebasescale) - devparms.timebaseoffset - ((devparms.hordivisions / 2) * devparms.timebasedelayscale));
     }
 
-    strlcpy(str, "Delayed timebase position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Delayed timebase position: %1s").arg(suffixed_metric_value(devparms.timebasedelayoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1308,13 +1297,7 @@ void UI_Mainwindow::former_page()
       }
     }
 
-    strlcpy(str, "Horizontal position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Horizontal position: %1s").arg(suffixed_metric_value(devparms.timebaseoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1322,11 +1305,9 @@ void UI_Mainwindow::former_page()
   waveForm->update();
 }
 
-
+// TODO: is this a nearly exact duplicate of former_page?
 void UI_Mainwindow::next_page()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1356,13 +1337,7 @@ void UI_Mainwindow::next_page()
       devparms.timebasedelayoffset = (((devparms.hordivisions / 2) * devparms.timebasescale) + devparms.timebaseoffset - ((devparms.hordivisions / 2) * devparms.timebasedelayscale));
     }
 
-    strlcpy(str, "Delayed timebase position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Delayed timebase position: %1s").arg(suffixed_metric_value(devparms.timebasedelayoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1385,13 +1360,8 @@ void UI_Mainwindow::next_page()
       }
     }
 
-    strlcpy(str, "Horizontal position: ", 512);
+    statusLabel->setText(QString("Horizontal position: %1s").arg(suffixed_metric_value(devparms.timebaseoffset, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1402,8 +1372,6 @@ void UI_Mainwindow::next_page()
 
 void UI_Mainwindow::shift_page_left()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1423,24 +1391,19 @@ void UI_Mainwindow::shift_page_left()
       devparms.math_fft_hcenter = 0.0;
     }
 
+    QString cmd;
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hcenter);
+      cmd = ":CALC:FFT:HCEN %1";
     }
     else
     {
-      snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hcenter);
+      cmd = ":MATH:FFT:HCEN %1";
     }
 
-    set_cue_cmd(str);
+    set_cue_cmd(cmd.arg(devparms.math_fft_hcenter).toLocal8Bit().constData());
 
-    strlcpy(str, "FFT center: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hcenter, 0, 512 - strlen(str));
-
-    strlcat(str, "Hz", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hcenter, 0)));
 
     waveForm->update();
 
@@ -1466,13 +1429,7 @@ void UI_Mainwindow::shift_page_left()
       devparms.timebasedelayoffset = -(((devparms.hordivisions / 2) * devparms.timebasescale) - devparms.timebaseoffset - ((devparms.hordivisions / 2) * devparms.timebasedelayscale));
     }
 
-    strlcpy(str, "Delayed timebase position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Delayed timebase position: %s").arg(suffixed_metric_value( devparms.timebasedelayoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1495,13 +1452,7 @@ void UI_Mainwindow::shift_page_left()
       }
     }
 
-    strlcpy(str, "Horizontal position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Horizontal position: %s").arg(suffixed_metric_value(devparms.timebaseoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1512,8 +1463,6 @@ void UI_Mainwindow::shift_page_left()
 
 void UI_Mainwindow::shift_page_right()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1533,24 +1482,19 @@ void UI_Mainwindow::shift_page_right()
       devparms.math_fft_hcenter = devparms.current_screen_sf * 0.4;
     }
 
+    QString cmd;
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hcenter);
+      cmd = ":CALC:FFT:HCEN %1";
     }
     else
     {
-      snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hcenter);
+      cmd = ":MATH:FFT:HCEN %1";
     }
 
-    set_cue_cmd(str);
+    set_cue_cmd(cmd.arg(devparms.math_fft_hcenter).toLocal8Bit().constData());
 
-    strlcpy(str, "FFT center: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hcenter, 0, 512 - strlen(str));
-
-    strlcat(str, "Hz", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hcenter, 0)));
 
     waveForm->update();
 
@@ -1576,13 +1520,7 @@ void UI_Mainwindow::shift_page_right()
       devparms.timebasedelayoffset = (((devparms.hordivisions / 2) * devparms.timebasescale) + devparms.timebaseoffset - ((devparms.hordivisions / 2) * devparms.timebasedelayscale));
     }
 
-    strlcpy(str, "Delayed timebase position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Delayed timebase position: %1s").arg(suffixed_metric_value(devparms.timebasedelayoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1605,13 +1543,7 @@ void UI_Mainwindow::shift_page_right()
       }
     }
 
-    strlcpy(str, "Horizontal position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Delayed timebase position: %1s").arg(suffixed_metric_value(devparms.timebaseoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1622,8 +1554,6 @@ void UI_Mainwindow::shift_page_right()
 
 void UI_Mainwindow::center_trigger()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1638,24 +1568,19 @@ void UI_Mainwindow::center_trigger()
   {
     devparms.math_fft_hcenter = 0;
 
+    QString cmd;
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hcenter);
+      cmd = ":CALC:FFT:HCEN %1";
     }
     else
     {
-      snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hcenter);
+      cmd = ":MATH:FFT:HCEN %1";
     }
 
-    set_cue_cmd(str);
+    set_cue_cmd(cmd.arg(devparms.math_fft_hcenter).toLocal8Bit().constData());
 
-    strlcpy(str, "FFT center: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hcenter, 0, 512 - strlen(str));
-
-    strlcat(str, "Hz", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hcenter, 0)));
 
     waveForm->update();
 
@@ -1671,13 +1596,7 @@ void UI_Mainwindow::center_trigger()
   {
     devparms.timebasedelayoffset = 0;
 
-    strlcpy(str, "Delayed timebase position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Delayed timebase position: %1s").arg(devparms.timebasedelayoffset, 2));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1685,13 +1604,7 @@ void UI_Mainwindow::center_trigger()
   {
     devparms.timebaseoffset = 0;
 
-    strlcpy(str, "Horizontal position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("Horizontal position: %1s").arg(suffixed_metric_value(devparms.timebaseoffset, 2)));
 
     horPosDial_timer->start(TMC_DIAL_TIMER_DELAY);
   }
@@ -1702,8 +1615,6 @@ void UI_Mainwindow::center_trigger()
 
 void UI_Mainwindow::zoom_in()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1739,24 +1650,19 @@ void UI_Mainwindow::zoom_in()
         devparms.math_fft_hscale = devparms.current_screen_sf / 200.0;
       }
 
+    QString cmd;
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:HSP %e", devparms.math_fft_hscale);
+      cmd =  ":CALC:FFT:HSP %1";
     }
     else
     {
-      snprintf(str, 512, ":MATH:FFT:HSC %e", devparms.math_fft_hscale);
+      cmd = ":MATH:FFT:HSC %1";
     }
 
-    set_cue_cmd(str);
+    set_cue_cmd(cmd.arg(devparms.math_fft_hscale).toLocal8Bit().constData());
 
-    strlcpy(str, "FFT scale: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale, 0, 512 - strlen(str));
-
-    strlcat(str, "Hz/Div", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("FFT scale: %1Hz/Div").arg(suffixed_metric_value(devparms.math_fft_hscale, 0)));
 
     waveForm->update();
 
@@ -1805,17 +1711,9 @@ void UI_Mainwindow::zoom_in()
 
     devparms.current_screen_sf = 100.0 / devparms.timebasedelayscale;
 
-    strlcpy(str, "Delayed timebase: ", 512);
+    statusLabel->setText(QString("Delayed timebase: %1s").arg(suffixed_metric_value(devparms.timebasedelayscale, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayscale, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TIM:DEL:SCAL %e", devparms.timebasedelayscale);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TIM:DEL:SCAL %1").arg(devparms.timebasedelayscale).toLocal8Bit().constData());
   }
   else
   {
@@ -1854,17 +1752,9 @@ void UI_Mainwindow::zoom_in()
 
     devparms.current_screen_sf = 100.0 / devparms.timebasescale;
 
-    strlcpy(str, "Timebase: ", 512);
+    statusLabel->setText(QString("Timebase %1s").arg(suffixed_metric_value(devparms.timebasescale, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasescale, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TIM:SCAL %e", devparms.timebasescale);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TIM:SCAL %1").arg(devparms.timebasescale).toLocal8Bit().constData());
   }
 
   waveForm->update();
@@ -1873,8 +1763,6 @@ void UI_Mainwindow::zoom_in()
 
 void UI_Mainwindow::zoom_out()
 {
-  char str[512];
-
   if(device == NULL)
   {
     return;
@@ -1910,24 +1798,19 @@ void UI_Mainwindow::zoom_out()
         devparms.math_fft_hscale = devparms.current_screen_sf / 20.0;
       }
 
+    QString cmd;
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:HSP %e", devparms.math_fft_hscale);
+      cmd = ":CALC:FFT:HSP %1";
     }
     else
     {
-      snprintf(str, 512, ":MATH:FFT:HSC %e", devparms.math_fft_hscale);
+      cmd = ":MATH:FFT:HSC %1";
     }
 
-    set_cue_cmd(str);
+    set_cue_cmd(cmd.arg(devparms.math_fft_hscale).toLocal8Bit().constData());
 
-    strlcpy(str, "FFT scale: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale, 0, 512 - strlen(str));
-
-    strlcat(str, "Hz/Div", 512);
-
-    statusLabel->setText(str);
+    statusLabel->setText(QString("FFT scale: %1Hz/Div").arg(suffixed_metric_value(devparms.math_fft_hscale, 0)));
 
     waveForm->update();
 
@@ -1954,17 +1837,9 @@ void UI_Mainwindow::zoom_out()
 
     devparms.current_screen_sf = 100.0 / devparms.timebasedelayscale;
 
-    strlcpy(str, "Delayed timebase: ", 512);
+    statusLabel->setText(QString("Delayed timebase: %1s").arg(suffixed_metric_value(devparms.timebasedelayscale, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayscale, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TIM:DEL:SCAL %e", devparms.timebasedelayscale);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TIM:DEL:SCAL %1").arg(devparms.timebasedelayscale).toLocal8Bit().constData());
 
     if(devparms.timebasedelayscale > 0.1000001)
     {
@@ -1984,17 +1859,9 @@ void UI_Mainwindow::zoom_out()
 
     devparms.current_screen_sf = 100.0 / devparms.timebasescale;
 
-    strlcpy(str, "Timebase: ", 512);
+    statusLabel->setText(QString("Timebase: %1s").arg(suffixed_metric_value(devparms.timebasescale, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasescale, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TIM:SCAL %e", devparms.timebasescale);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TIM:SCAL %1").arg(devparms.timebasescale).toLocal8Bit().constData());
 
     if(devparms.timebasescale > 0.1000001)
     {
@@ -2011,8 +1878,6 @@ void UI_Mainwindow::chan_scale_plus()
   int chn;
 
   double val, ltmp;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2062,38 +1927,30 @@ void UI_Mainwindow::chan_scale_plus()
     {
       if(devparms.math_fft_unit == 1)
       {
-        snprintf(str, 512, ":CALC:FFT:VSC %e", devparms.fft_vscale);
-
-        set_cue_cmd(str);
+        set_cue_cmd(QString(":CALC:FFT:VSC %1").arg(devparms.fft_vscale).toLocal8Bit().constData());
       }
       else
       {
-        snprintf(str, 512, ":CALC:FFT:VSC %e", devparms.fft_vscale / devparms.chanscale[devparms.math_fft_src]);
-
-        set_cue_cmd(str);
+        set_cue_cmd(QString(":CALC:FFT:VSC %1").arg(devparms.fft_vscale / devparms.chanscale[devparms.math_fft_src])
+          .toLocal8Bit().constData());
       }
     }
     else
     {
-      snprintf(str, 512, ":MATH:SCAL %e", devparms.fft_vscale);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString(":MATH:SCAL %1").arg(devparms.fft_vscale).toLocal8Bit().constData());
     }
 
+    QString label;
     if(devparms.math_fft_unit == 0)
     {
-      strlcpy(str, "FFT scale: ", 512);
-
-      convert_to_metric_suffix(str + strlen(str), devparms.fft_vscale, 1, 512 - strlen(str));
-
-      strlcat(str, "V/Div", 512);
+      label = QString("FFT scale: %1V/Div").arg(suffixed_metric_value(devparms.fft_vscale, 1));
     }
     else
     {
-      snprintf(str, 512, "FFT scale: %.1fdB/Div", devparms.fft_vscale);
+      label = QString("FFT scale: %1db/Div").arg(devparms.fft_vscale,0,'f',1);
     }
 
-    statusLabel->setText(str);
+    statusLabel->setText(label);
 
     waveForm->update();
 
@@ -2128,17 +1985,10 @@ void UI_Mainwindow::chan_scale_plus()
 
   devparms.chanoffset[chn] /= ltmp;
 
-  snprintf(str, 512, "Channel %i scale: ", chn + 1);
+  statusLabel->setText(QString("Channel %1 scale: %2V")
+    .arg(chn + 1).arg(suffixed_metric_value(devparms.chanscale[chn], 2)));
 
-  convert_to_metric_suffix(str + strlen(str), devparms.chanscale[chn], 2, 512 - strlen(str));
-
-  strlcat(str, "V", 512);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:SCAL %e", chn + 1, devparms.chanscale[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().constData());
 
   waveForm->update();
 }
@@ -2149,8 +1999,6 @@ void UI_Mainwindow::chan_scale_plus_all()
   int chn;
 
   double val, ltmp;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2202,17 +2050,9 @@ void UI_Mainwindow::chan_scale_plus_all()
 
     devparms.chanoffset[chn] /= ltmp;
 
-    snprintf(str, 512, "Channel %i scale: ", chn + 1);
+    statusLabel->setText(QString("Channel %1 scale: %2V").arg(chn + 1).arg(suffixed_metric_value(devparms.chanscale[chn], 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.chanscale[chn], 2, 512 - strlen(str));
-
-    strlcat(str, "V", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":CHAN%i:SCAL %e", chn + 1, devparms.chanscale[chn]);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().constData());
   }
 
   waveForm->update();
@@ -2224,8 +2064,6 @@ void UI_Mainwindow::chan_scale_minus()
   int chn;
 
   double val, ltmp;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2275,38 +2113,30 @@ void UI_Mainwindow::chan_scale_minus()
     {
       if(devparms.math_fft_unit == 1)
       {
-        snprintf(str, 512, ":CALC:FFT:VSC %e", devparms.fft_vscale);
-
-        set_cue_cmd(str);
+        set_cue_cmd(QString(":CALC:FFT:VSC %1").arg(devparms.fft_vscale).toLocal8Bit().constData());
       }
       else
       {
-        snprintf(str, 512, ":CALC:FFT:VSC %e", devparms.fft_vscale / devparms.chanscale[devparms.math_fft_src]);
-
-        set_cue_cmd(str);
+        set_cue_cmd(QString(":CALC:FFT:VSC %1").arg(devparms.fft_vscale / devparms.chanscale[devparms.math_fft_src])
+         .toLocal8Bit().constData());
       }
     }
     else
     {
-      snprintf(str, 512, ":MATH:SCAL %e", devparms.fft_vscale);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString(":MATH:SCAL %1").arg(devparms.fft_vscale).toLocal8Bit().constData());
     }
 
+    QString label;
     if(devparms.math_fft_unit == 0)
     {
-      strlcpy(str, "FFT scale: ", 512);
-
-      convert_to_metric_suffix(str + strlen(str), devparms.fft_vscale, 1, 512 - strlen(str));
-
-      strlcat(str, "V/Div", 512);
+      label = QString("FFT scale: %1V/Div").arg(suffixed_metric_value(devparms.fft_vscale, 1));
     }
     else
     {
-      snprintf(str, 512, "FFT scale: %.1fdB/Div", devparms.fft_vscale);
+      label = QString("FFT scale: %1dB/Div").arg(devparms.fft_vscale);
     }
 
-    statusLabel->setText(str);
+    statusLabel->setText(label);
 
     waveForm->update();
 
@@ -2348,17 +2178,9 @@ void UI_Mainwindow::chan_scale_minus()
 
   devparms.chanoffset[chn] /= ltmp;
 
-  snprintf(str, 512, "Channel %i scale: ", chn + 1);
+  statusLabel->setText(QString("Channel %1 scale: %2V").arg(chn + 1).arg(suffixed_metric_value(devparms.chanscale[chn], 2)));
 
-  convert_to_metric_suffix(str + strlen(str), devparms.chanscale[chn], 2, 512 - strlen(str));
-
-  strlcat(str, "V", 512);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:SCAL %e", chn + 1, devparms.chanscale[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().constData());
 
   waveForm->update();
 }
@@ -2369,8 +2191,6 @@ void UI_Mainwindow::chan_scale_minus_all()
   int chn;
 
   double val, ltmp;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2429,17 +2249,9 @@ void UI_Mainwindow::chan_scale_minus_all()
 
     devparms.chanoffset[chn] /= ltmp;
 
-    snprintf(str, 512, "Channel %i scale: ", chn + 1);
+    statusLabel->setText(QString("Channel %1 scale: %2V").arg(chn + 1).arg(suffixed_metric_value(devparms.chanscale[chn], 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.chanscale[chn], 2, 512 - strlen(str));
-
-    strlcat(str, "V", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":CHAN%i:SCAL %e", chn + 1, devparms.chanscale[chn]);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().constData());
   }
 
   waveForm->update();
@@ -2449,8 +2261,6 @@ void UI_Mainwindow::chan_scale_minus_all()
 void UI_Mainwindow::shift_trace_up()
 {
   int chn;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2481,33 +2291,28 @@ void UI_Mainwindow::shift_trace_up()
       devparms.fft_voffset = nearbyint(devparms.fft_voffset);
     }
 
+    QString cmd;
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:VOFF %e", devparms.fft_voffset);
-
-      set_cue_cmd(str);
+      cmd = ":CALC:FFT:VOFF %1";
     }
     else
     {
-      snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
-
-      set_cue_cmd(str);
+      cmd = ":MATH:OFFS %1";
     }
+    set_cue_cmd(cmd.arg(devparms.fft_voffset).toLocal8Bit().constData());
 
+    QString label;
     if(devparms.math_fft_unit == 0)
     {
-      strlcpy(str, "FFT position: ", 512);
-
-      convert_to_metric_suffix(str + strlen(str), devparms.fft_voffset, 1, 512 - strlen(str));
-
-      strlcat(str, "V", 512);
+      label = QString("FFT position: %1V").arg(suffixed_metric_value(devparms.fft_voffset, 1));
     }
     else
     {
-      snprintf(str, 512, "FFT position: %+.0fdB", devparms.fft_voffset);
+      label = QString("FFT position: %1db").arg(devparms.fft_voffset,0,'f',0);
     }
 
-    statusLabel->setText(str);
+    statusLabel->setText(label);
 
     waveForm->label_active = LABEL_ACTIVE_FFT;
 
@@ -2529,13 +2334,9 @@ void UI_Mainwindow::shift_trace_up()
 
   devparms.chanoffset[chn] += devparms.chanscale[chn];
 
-  snprintf(str, 512, "Channel %i offset: ", chn + 1);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.chanoffset[chn], 2, 512 - strlen(str));
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[chn]], 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("Channel %1 offset: %2%3")
+    .arg(suffixed_metric_value(devparms.chanoffset[chn], 2))
+    .arg(QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[chn]],2)));
 
   waveForm->label_active = chn + 1;
 
@@ -2550,8 +2351,6 @@ void UI_Mainwindow::shift_trace_up()
 void UI_Mainwindow::shift_trace_down()
 {
   int chn;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2591,31 +2390,24 @@ void UI_Mainwindow::shift_trace_down()
 
     if(devparms.modelserie != 1)
     {
-      snprintf(str, 512, ":CALC:FFT:VOFF %e", devparms.fft_voffset);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString(":CALC:FFT:VOFF %1").arg(devparms.fft_voffset).toLocal8Bit().constData());
     }
     else
     {
-      snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString(":MATH:OFFS %1").arg(devparms.fft_voffset).toLocal8Bit().constData());
     }
 
+    QString label;
     if(devparms.math_fft_unit == 0)
     {
-      strlcpy(str, "FFT position: ", 512);
-
-      convert_to_metric_suffix(str + strlen(str), devparms.fft_voffset, 1, 512 - strlen(str));
-
-      strlcat(str, "V", 512);
+      label = QString("FFT position: %1V").arg(suffixed_metric_value(devparms.fft_voffset, 1));
     }
     else
     {
-      snprintf(str, 512, "FFT position: %+.0fdB", devparms.fft_voffset);
+      label = QString("FFT position: %1dB").arg(devparms.fft_voffset,0,'f',0);
     }
 
-    statusLabel->setText(str);
+    statusLabel->setText(label);
 
     waveForm->label_active = LABEL_ACTIVE_FFT;
 
@@ -2637,13 +2429,9 @@ void UI_Mainwindow::shift_trace_down()
 
   devparms.chanoffset[chn] -= devparms.chanscale[chn];
 
-  snprintf(str, 512, "Channel %i offset: ", chn + 1);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.chanoffset[chn], 2, 512 - strlen(str));
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[chn]], 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("Channel %1 offset: %2%3")
+    .arg(suffixed_metric_value(devparms.chanoffset[chn], 2))
+    .arg(QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[chn]],2)));
 
   waveForm->label_active = chn + 1;
 
@@ -2658,8 +2446,6 @@ void UI_Mainwindow::shift_trace_down()
 void UI_Mainwindow::set_to_factory()
 {
   int i;
-
-  char str[512];
 
   if((device == NULL) || (!devparms.connected))
   {
@@ -2764,9 +2550,7 @@ void UI_Mainwindow::set_to_factory()
   {
     for(i=0; i<MAX_CHNS; i++)
     {
-      snprintf(str, 512, ":CHAN%i:SCAL 1", i + 1);
-
-      tmc_write(str);
+      tmc_write(QString(":CHAN%1:SCAL 1").arg(i+1).toLocal8Bit().constData());
 
       usleep(20000);
     }
@@ -2780,8 +2564,6 @@ void UI_Mainwindow::set_to_factory()
 void UI_Mainwindow::screenUpdate()
 {
   int i, chns=0;
-
-  char str[512];
 
   if(device == NULL)
   {
@@ -2810,12 +2592,10 @@ void UI_Mainwindow::screenUpdate()
   {
     scrn_timer->stop();
 
-    snprintf(str, 512, "An error occurred while reading screen data from device.\n"
-                "File screen_thread.cpp line %i", devparms.thread_error_line);
-
     QMessageBox msgBox;
     msgBox.setIcon(QMessageBox::Critical);
-    msgBox.setText(str);
+    msgBox.setText(QString("An error occurred while reading screen data from device.\n"
+                           "File screen_thread.cpp line %1").arg(devparms.thread_error_line));
     msgBox.exec();
 
     pthread_mutex_unlock(&devparms.mutexx);
@@ -2941,7 +2721,7 @@ void UI_Mainwindow::screenUpdate()
   pthread_mutex_unlock(&devparms.mutexx);
 }
 
-
+// TODO: find out why this construct, optimize it
 void UI_Mainwindow::set_cue_cmd(const char *str)
 {
   strlcpy(devparms.cmd_cue[devparms.cmd_cue_idx_in], str, 128);

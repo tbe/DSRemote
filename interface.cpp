@@ -34,190 +34,148 @@ void UI_Mainwindow::navDialChanged(int npos)
 
   double val, lefttime, righttime, delayrange;
 
-  if(navDial->isSliderDown() == true)
-  {
+  if (navDial->isSliderDown() == true) {
     navDial_timer->start(100);
   }
-  else
-  {
+  else {
     navDial_timer->start(300);
   }
 
-  if(npos > 93)
-    {
-      mpr = 64;
-    }
-    else if(npos > 86)
-      {
-        mpr = 32;
-      }
-      else if(npos > 79)
-        {
-          mpr = 16;
-        }
-        else if(npos > 72)
-          {
-            mpr = 8;
-          }
-          else if(npos > 65)
-            {
-              mpr = 4;
-            }
-            else if(npos > 58)
-              {
-                mpr = 2;
-              }
-              else if(npos > 51)
-                {
-                  mpr = 1;
-                }
-                else if(npos > 49)
-                  {
-                    return;
-                  }
-                  else if(npos > 42)
-                    {
-                      mpr = -1;
-                    }
-                    else if(npos > 35)
-                      {
-                        mpr = -2;
-                      }
-                      else if(npos > 28)
-                        {
-                          mpr = -4;
-                        }
-                        else if(npos > 21)
-                          {
-                            mpr = -8;
-                          }
-                          else if(npos > 14)
-                            {
-                              mpr = -16;
-                            }
-                            else if(npos > 7)
-                              {
-                                mpr = -32;
-                              }
-                              else
-                              {
-                                mpr = -64;
-                              }
+  if (npos > 93) {
+    mpr = 64;
+  }
+  else if (npos > 86) {
+    mpr = 32;
+  }
+  else if (npos > 79) {
+    mpr = 16;
+  }
+  else if (npos > 72) {
+    mpr = 8;
+  }
+  else if (npos > 65) {
+    mpr = 4;
+  }
+  else if (npos > 58) {
+    mpr = 2;
+  }
+  else if (npos > 51) {
+    mpr = 1;
+  }
+  else if (npos > 49) {
+    return;
+  }
+  else if (npos > 42) {
+    mpr = -1;
+  }
+  else if (npos > 35) {
+    mpr = -2;
+  }
+  else if (npos > 28) {
+    mpr = -4;
+  }
+  else if (npos > 21) {
+    mpr = -8;
+  }
+  else if (npos > 14) {
+    mpr = -16;
+  }
+  else if (npos > 7) {
+    mpr = -32;
+  }
+  else {
+    mpr = -64;
+  }
 
-  if(navDialFunc == NAV_DIAL_FUNC_HOLDOFF)
-  {
+  if (navDialFunc == NAV_DIAL_FUNC_HOLDOFF) {
     adjdial_timer->start(ADJDIAL_TIMER_IVAL_2);
 
     val = get_stepsize_divide_by_1000(devparms.triggerholdoff);
 
     devparms.triggerholdoff += (val * mpr);
 
-    if(devparms.modelserie == 1)
-    {
-      if(devparms.triggerholdoff < 1.7e-8)
-      {
+    if (devparms.modelserie == 1) {
+      if (devparms.triggerholdoff < 1.7e-8) {
         devparms.triggerholdoff = 1.6e-8;
       }
     }
-    else
-    {
-      if(devparms.triggerholdoff < 1.01e-7)
-      {
+    else {
+      if (devparms.triggerholdoff < 1.01e-7) {
         devparms.triggerholdoff = 1e-7;
       }
     }
 
-    if(devparms.triggerholdoff > 10)
-    {
+    if (devparms.triggerholdoff > 10) {
       devparms.triggerholdoff = 10;
     }
   }
-  else if(devparms.timebasedelayenable)
-    {
-      val = devparms.timebasedelayoffset;
+  else if (devparms.timebasedelayenable) {
+    val = devparms.timebasedelayoffset;
 
-      if(val < 0)
-      {
-        val *= -1;
-      }
-
-      if(val < 2e-7)
-      {
-        val = 2e-7;
-      }
-
-      val = get_stepsize_divide_by_1000(val);
-
-      devparms.timebasedelayoffset += (val * mpr);
-
-      lefttime = ((devparms.hordivisions / 2) * devparms.timebasescale) - devparms.timebaseoffset;
-
-      righttime = ((devparms.hordivisions / 2) * devparms.timebasescale) + devparms.timebaseoffset;
-
-      delayrange = (devparms.hordivisions / 2) * devparms.timebasedelayscale;
-
-      if(devparms.timebasedelayoffset < -(lefttime - delayrange))
-      {
-        devparms.timebasedelayoffset = -(lefttime - delayrange);
-      }
-
-      if(devparms.timebasedelayoffset > (righttime - delayrange))
-      {
-        devparms.timebasedelayoffset = (righttime - delayrange);
-      }
+    if (val < 0) {
+      val *= -1;
     }
 
-    waveForm->update();
-}
+    if (val < 2e-7) {
+      val = 2e-7;
+    }
 
+    val = get_stepsize_divide_by_1000(val);
 
-void UI_Mainwindow::navDialReleased()
-{
-  char str[512];
+    devparms.timebasedelayoffset += (val * mpr);
 
-  navDial->setSliderPosition(50);
+    lefttime = ((devparms.hordivisions / 2) * devparms.timebasescale) - devparms.timebaseoffset;
 
-  if(navDialFunc == NAV_DIAL_FUNC_HOLDOFF)
-  {
-    strlcpy(str, "Trigger holdoff: ", 512);
+    righttime = ((devparms.hordivisions / 2) * devparms.timebasescale) + devparms.timebaseoffset;
 
-    convert_to_metric_suffix(str + strlen(str), devparms.triggerholdoff, 2, 512);
+    delayrange = (devparms.hordivisions / 2) * devparms.timebasedelayscale;
 
-    strlcat(str, "s", 512);
+    if (devparms.timebasedelayoffset < -(lefttime - delayrange)) {
+      devparms.timebasedelayoffset = -(lefttime - delayrange);
+    }
 
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TRIG:HOLD %e", devparms.triggerholdoff);
-
-    set_cue_cmd(str);
+    if (devparms.timebasedelayoffset > (righttime - delayrange)) {
+      devparms.timebasedelayoffset = (righttime - delayrange);
+    }
   }
-  else if(devparms.timebasedelayenable)
-    {
-      strlcpy(str, "Delayed timebase position: ", 512);
-
-      convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512);
-
-      strlcat(str, "s", 512);
-
-      statusLabel->setText(str);
-
-      snprintf(str, 512, ":TIM:DEL:OFFS %e", devparms.timebasedelayoffset);
-
-      set_cue_cmd(str);
-    }
 
   waveForm->update();
 }
 
+void UI_Mainwindow::navDialReleased()
+{
+  QString str;
+
+  navDial->setSliderPosition(50);
+
+  if (navDialFunc == NAV_DIAL_FUNC_HOLDOFF) {
+    str = "Trigger holdoff: ";
+    str += suffixed_metric_value(devparms.triggerholdoff, 2);
+    str += "s";
+
+    statusLabel->setText(str);
+
+    set_cue_cmd(QString(":TRIG:HOLD %1").arg(devparms.triggerholdoff).toLocal8Bit().data());
+  }
+  else if (devparms.timebasedelayenable) {
+    str = "Delayed timebase position: ";
+    str += suffixed_metric_value(devparms.timebasedelayoffset, 2);
+    str += "s";
+
+    statusLabel->setText(str);
+    set_cue_cmd(QString(":TIM:DEL:OFFS %1").arg(devparms.timebasedelayoffset).toLocal8Bit().data());
+  }
+
+  waveForm->update();
+}
 
 void UI_Mainwindow::adjDialChanged(int new_pos)
 {
-  static int old_pos=50;
+  static int old_pos = 50;
 
   int diff, dir;
 
-  if(adjDialFunc == ADJ_DIAL_FUNC_NONE)
-  {
+  if (adjDialFunc == ADJ_DIAL_FUNC_NONE) {
     return;
   }
 
@@ -225,45 +183,34 @@ void UI_Mainwindow::adjDialChanged(int new_pos)
 
   diff = new_pos - old_pos;
 
-  if(diff < 0)
-  {
+  if (diff < 0) {
     diff *= -1;
   }
 
-  if(diff < 6)
-  {
+  if (diff < 6) {
     return;
   }
 
-  if(new_pos > old_pos)
-  {
-    if(diff < 12)
-    {
+  if (new_pos > old_pos) {
+    if (diff < 12) {
       dir = 0;
     }
-    else
-    {
+    else {
       dir = 1;
     }
   }
-  else
-  {
-    if(diff < 12)
-    {
+  else {
+    if (diff < 12) {
       dir = 1;
     }
-    else
-    {
+    else {
       dir = 0;
     }
   }
 
-  if(adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF)
-  {
-    if(!dir)
-    {
-      if(devparms.triggerholdoff >= 10)
-      {
+  if (adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF) {
+    if (!dir) {
+      if (devparms.triggerholdoff >= 10) {
         devparms.triggerholdoff = 10;
 
         old_pos = new_pos;
@@ -273,12 +220,9 @@ void UI_Mainwindow::adjDialChanged(int new_pos)
 
       devparms.triggerholdoff += get_stepsize_divide_by_1000(devparms.triggerholdoff);
     }
-    else
-    {
-      if(devparms.modelserie == 1)
-      {
-        if(devparms.triggerholdoff < 1.7e-8)
-        {
+    else {
+      if (devparms.modelserie == 1) {
+        if (devparms.triggerholdoff < 1.7e-8) {
           devparms.triggerholdoff = 1.6e-8;
 
           old_pos = new_pos;
@@ -286,10 +230,8 @@ void UI_Mainwindow::adjDialChanged(int new_pos)
           return;
         }
       }
-      else
-      {
-        if(devparms.triggerholdoff <= 1.01e-7)
-        {
+      else {
+        if (devparms.triggerholdoff <= 1.01e-7) {
           devparms.triggerholdoff = 1e-7;
 
           old_pos = new_pos;
@@ -301,115 +243,92 @@ void UI_Mainwindow::adjDialChanged(int new_pos)
       devparms.triggerholdoff -= get_stepsize_divide_by_1000(devparms.triggerholdoff);
     }
   }
-  else if(adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG)
-    {
-      if(!dir)
-      {
-        if(devparms.modelserie == 6)
-        {
-          if(devparms.acquireaverages >= 8192)
-          {
-            devparms.acquireaverages = 8192;
-
-            old_pos = new_pos;
-
-            return;
-          }
-        }
-        else
-        {
-          if(devparms.acquireaverages >= 1024)
-          {
-            devparms.acquireaverages = 1024;
-
-            old_pos = new_pos;
-
-            return;
-          }
-        }
-
-        devparms.acquireaverages *= 2;
-      }
-      else
-      {
-        if(devparms.acquireaverages <= 2)
-        {
-          devparms.acquireaverages = 2;
+  else if (adjDialFunc == ADJ_DIAL_FUNC_ACQ_AVG) {
+    if (!dir) {
+      if (devparms.modelserie == 6) {
+        if (devparms.acquireaverages >= 8192) {
+          devparms.acquireaverages = 8192;
 
           old_pos = new_pos;
 
           return;
         }
-
-        devparms.acquireaverages /= 2;
       }
+      else {
+        if (devparms.acquireaverages >= 1024) {
+          devparms.acquireaverages = 1024;
+
+          old_pos = new_pos;
+
+          return;
+        }
+      }
+
+      devparms.acquireaverages *= 2;
     }
+    else {
+      if (devparms.acquireaverages <= 2) {
+        devparms.acquireaverages = 2;
+
+        old_pos = new_pos;
+
+        return;
+      }
+
+      devparms.acquireaverages /= 2;
+    }
+  }
 
   old_pos = new_pos;
 
   waveForm->update();
 }
 
-
 void UI_Mainwindow::trigAdjustDialChanged(int new_pos)
 {
-  static int old_pos=50;
+  static int old_pos = 50;
 
   int diff, dir, chn;
 
-  char str[512];
-
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
   chn = devparms.triggeredgesource;
 
-  if((chn < 0) || (chn > 3))
-  {
+  if ((chn < 0) || (chn > 3)) {
     return;
   }
 
   diff = new_pos - old_pos;
 
-  if(diff < 0)
-  {
+  if (diff < 0) {
     diff *= -1;
   }
 
-  if(diff < 6)
-  {
+  if (diff < 6) {
     return;
   }
 
-  if(new_pos > old_pos)
-  {
-    if(diff < 12)
-    {
+  if (new_pos > old_pos) {
+    if (diff < 12) {
       dir = 0;
     }
-    else
-    {
+    else {
       dir = 1;
     }
   }
-  else
-  {
-    if(diff < 12)
-    {
+  else {
+    if (diff < 12) {
       dir = 1;
     }
-    else
-    {
+    else {
       dir = 0;
     }
   }
 
-  if(dir)
-  {
-    if(devparms.triggeredgelevel[chn] <= (-6 * devparms.chanscale[chn]))
-    {
+  if (dir) {
+    if (devparms.triggeredgelevel[chn] <= (-6 * devparms.chanscale[chn])) {
       devparms.triggeredgelevel[chn] = -6 * devparms.chanscale[chn];
 
       old_pos = new_pos;
@@ -419,10 +338,8 @@ void UI_Mainwindow::trigAdjustDialChanged(int new_pos)
 
     devparms.triggeredgelevel[chn] -= devparms.chanscale[chn] / 50;
   }
-  else
-  {
-    if(devparms.triggeredgelevel[chn] >= (6 * devparms.chanscale[chn]))
-    {
+  else {
+    if (devparms.triggeredgelevel[chn] >= (6 * devparms.chanscale[chn])) {
       devparms.triggeredgelevel[chn] = 6 * devparms.chanscale[chn];
 
       old_pos = new_pos;
@@ -433,11 +350,9 @@ void UI_Mainwindow::trigAdjustDialChanged(int new_pos)
     devparms.triggeredgelevel[chn] += devparms.chanscale[chn] / 50;
   }
 
-  strlcpy(str, "Trigger level: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.triggeredgelevel[chn], 2, 512);
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[chn]], 512);
+  QString str{"Trigger level: "};
+  str += suffixed_metric_value(devparms.triggeredgelevel[chn], 2);
+  str += QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[chn]], 2);
 
   statusLabel->setText(str);
 
@@ -454,56 +369,42 @@ void UI_Mainwindow::trigAdjustDialChanged(int new_pos)
   waveForm->update();
 }
 
-
 void UI_Mainwindow::horScaleDialChanged(int new_pos)
 {
-  static int old_pos=50;
+  static int old_pos = 50;
 
   int diff, dir;
 
-  char str[512];
-
   diff = new_pos - old_pos;
 
-  if(diff < 0)
-  {
+  if (diff < 0) {
     diff *= -1;
   }
 
-  if(diff < 6)
-  {
+  if (diff < 6) {
     return;
   }
 
-  if(new_pos > old_pos)
-  {
-    if(diff < 12)
-    {
+  if (new_pos > old_pos) {
+    if (diff < 12) {
       dir = 0;
     }
-    else
-    {
+    else {
       dir = 1;
     }
   }
-  else
-  {
-    if(diff < 12)
-    {
+  else {
+    if (diff < 12) {
       dir = 1;
     }
-    else
-    {
+    else {
       dir = 0;
     }
   }
 
-  if(devparms.timebasedelayenable)
-  {
-    if(dir)
-    {
-      if(devparms.timebasedelayscale >= devparms.timebasescale / 2)
-      {
+  if (devparms.timebasedelayenable) {
+    if (dir) {
+      if (devparms.timebasedelayscale >= devparms.timebasescale / 2) {
         devparms.timebasedelayscale = devparms.timebasescale / 2;
 
         old_pos = new_pos;
@@ -511,8 +412,7 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
         return;
       }
 
-      if(devparms.timebasedelayscale >= 0.1)
-      {
+      if (devparms.timebasedelayscale >= 0.1) {
         devparms.timebasedelayscale = 0.1;
 
         old_pos = new_pos;
@@ -520,12 +420,9 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
         return;
       }
     }
-    else
-    {
-      if(devparms.modelserie == 1)
-      {
-        if(devparms.timebasedelayscale <= 5.001e-9)
-        {
+    else {
+      if (devparms.modelserie == 1) {
+        if (devparms.timebasedelayscale <= 5.001e-9) {
           devparms.timebasedelayscale = 5e-9;
 
           old_pos = new_pos;
@@ -533,12 +430,9 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
           return;
         }
       }
-      else
-      {
-        if(devparms.bandwidth == 1000)
-        {
-          if(devparms.timebasedelayscale <= 5.001e-10)
-          {
+      else {
+        if (devparms.bandwidth == 1000) {
+          if (devparms.timebasedelayscale <= 5.001e-10) {
             devparms.timebasedelayscale = 5e-10;
 
             old_pos = new_pos;
@@ -546,10 +440,8 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
             return;
           }
         }
-        else
-        {
-          if(devparms.timebasedelayscale <= 1.001e-9)
-          {
+        else {
+          if (devparms.timebasedelayscale <= 1.001e-9) {
             devparms.timebasedelayscale = 1e-9;
 
             old_pos = new_pos;
@@ -560,22 +452,18 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
       }
     }
 
-    if(dir)
-    {
+    if (dir) {
       devparms.timebasedelayscale = round_up_step125(devparms.timebasedelayscale, NULL);
     }
-    else
-    {
+    else {
       devparms.timebasedelayscale = round_down_step125(devparms.timebasedelayscale, NULL);
     }
 
     devparms.current_screen_sf = 100.0 / devparms.timebasedelayscale;
 
-    strlcpy(str, "Delayed timebase: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayscale, 2, 512);
-
-    strlcat(str, "s", 512);
+    QString str{"Delayed timebase: "};
+    str += suffixed_metric_value(devparms.timebasedelayscale, 2);
+    str += "s";
 
     statusLabel->setText(str);
 
@@ -583,17 +471,13 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
 
     old_pos = new_pos;
 
-    if(devparms.timebasedelayscale > 0.1000001)
-    {
+    if (devparms.timebasedelayscale > 0.1000001) {
       devparms.func_wrec_enable = 0;
     }
   }
-  else
-  {
-    if(dir)
-    {
-      if(devparms.timebasescale >= 10)
-      {
+  else {
+    if (dir) {
+      if (devparms.timebasescale >= 10) {
         devparms.timebasescale = 10;
 
         old_pos = new_pos;
@@ -601,12 +485,9 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
         return;
       }
     }
-    else
-    {
-      if(devparms.modelserie == 1)
-      {
-        if(devparms.timebasescale <= 5.001e-9)
-        {
+    else {
+      if (devparms.modelserie == 1) {
+        if (devparms.timebasescale <= 5.001e-9) {
           devparms.timebasescale = 5e-9;
 
           old_pos = new_pos;
@@ -614,12 +495,9 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
           return;
         }
       }
-      else
-      {
-        if(devparms.bandwidth == 1000)
-        {
-          if(devparms.timebasescale <= 5.001e-10)
-          {
+      else {
+        if (devparms.bandwidth == 1000) {
+          if (devparms.timebasescale <= 5.001e-10) {
             devparms.timebasescale = 5e-10;
 
             old_pos = new_pos;
@@ -627,10 +505,8 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
             return;
           }
         }
-        else
-        {
-          if(devparms.timebasescale <= 1.001e-9)
-          {
+        else {
+          if (devparms.timebasescale <= 1.001e-9) {
             devparms.timebasescale = 1e-9;
 
             old_pos = new_pos;
@@ -641,22 +517,18 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
       }
     }
 
-    if(dir)
-    {
+    if (dir) {
       devparms.timebasescale = round_up_step125(devparms.timebasescale, NULL);
     }
-    else
-    {
+    else {
       devparms.timebasescale = round_down_step125(devparms.timebasescale, NULL);
     }
 
     devparms.current_screen_sf = 100.0 / devparms.timebasescale;
 
-    strlcpy(str, "Timebase: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasescale, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
+    QString str{"Timebase: "};
+    str += suffixed_metric_value(devparms.timebasescale, 2);
+    str += "s";
 
     statusLabel->setText(str);
 
@@ -664,8 +536,7 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
 
     old_pos = new_pos;
 
-    if(devparms.timebasescale > 0.1000001)
-    {
+    if (devparms.timebasescale > 0.1000001) {
       devparms.func_wrec_enable = 0;
     }
   }
@@ -673,61 +544,48 @@ void UI_Mainwindow::horScaleDialChanged(int new_pos)
   waveForm->update();
 }
 
-
 void UI_Mainwindow::horPosDialChanged(int new_pos)
 {
-  static int old_pos=50;
+  static int old_pos = 50;
 
   int diff, dir;
 
-  char str[512];
-
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
   diff = new_pos - old_pos;
 
-  if(diff < 0)
-  {
+  if (diff < 0) {
     diff *= -1;
   }
 
-  if(diff < 6)
-  {
+  if (diff < 6) {
     return;
   }
 
-  if(new_pos > old_pos)
-  {
-    if(diff < 12)
-    {
+  if (new_pos > old_pos) {
+    if (diff < 12) {
       dir = 0;
     }
-    else
-    {
+    else {
       dir = 1;
     }
   }
-  else
-  {
-    if(diff < 12)
-    {
+  else {
+    if (diff < 12) {
       dir = 1;
     }
-    else
-    {
+    else {
       dir = 0;
     }
   }
 
-  if(devparms.timebasedelayenable)
-  {
-    if(dir)
-    {
-      if(devparms.timebasedelayoffset >= (((devparms.hordivisions / 2) * devparms.timebasescale) + devparms.timebaseoffset - ((devparms.hordivisions / 2) * devparms.timebasedelayscale)))
-      {
+  if (devparms.timebasedelayenable) {
+    if (dir) {
+      if (devparms.timebasedelayoffset
+          >= (((devparms.hordivisions / 2) * devparms.timebasescale) + devparms.timebaseoffset
+              - ((devparms.hordivisions / 2) * devparms.timebasedelayscale))) {
         old_pos = new_pos;
 
         return;
@@ -735,10 +593,10 @@ void UI_Mainwindow::horPosDialChanged(int new_pos)
 
       devparms.timebasedelayoffset += (devparms.timebasedelayscale / 50);
     }
-    else
-    {
-      if(devparms.timebasedelayoffset <= -(((devparms.hordivisions / 2) * devparms.timebasescale) - devparms.timebaseoffset - ((devparms.hordivisions / 2) * devparms.timebasedelayscale)))
-      {
+    else {
+      if (devparms.timebasedelayoffset
+          <= -(((devparms.hordivisions / 2) * devparms.timebasescale) - devparms.timebaseoffset
+              - ((devparms.hordivisions / 2) * devparms.timebasedelayscale))) {
         old_pos = new_pos;
 
         return;
@@ -747,11 +605,9 @@ void UI_Mainwindow::horPosDialChanged(int new_pos)
       devparms.timebasedelayoffset -= (devparms.timebasedelayscale / 50);
     }
 
-    strlcpy(str, "Delayed timebase position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512);
-
-    strlcat(str, "s", 512);
+    QString str{"Delayed timebase position: "};
+    str += suffixed_metric_value(devparms.timebasedelayoffset, 2);
+    str += "s";
 
     statusLabel->setText(str);
 
@@ -759,12 +615,9 @@ void UI_Mainwindow::horPosDialChanged(int new_pos)
 
     old_pos = new_pos;
   }
-  else
-  {
-    if(dir)
-    {
-      if(devparms.timebaseoffset >= 1)
-      {
+  else {
+    if (dir) {
+      if (devparms.timebaseoffset >= 1) {
         devparms.timebaseoffset = 1;
 
         old_pos = new_pos;
@@ -774,10 +627,8 @@ void UI_Mainwindow::horPosDialChanged(int new_pos)
 
       devparms.timebaseoffset += devparms.timebasescale / 50;
     }
-    else
-    {
-      if(devparms.timebaseoffset <= -1)
-      {
+    else {
+      if (devparms.timebaseoffset <= -1) {
         devparms.timebaseoffset = -1;
 
         old_pos = new_pos;
@@ -788,11 +639,9 @@ void UI_Mainwindow::horPosDialChanged(int new_pos)
       devparms.timebaseoffset -= devparms.timebasescale / 50;
     }
 
-    strlcpy(str, "Horizontal position: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
+    QString str{"Horizontal position position: "};
+    str += suffixed_metric_value(devparms.timebaseoffset, 2);
+    str += "s";
 
     statusLabel->setText(str);
 
@@ -804,19 +653,15 @@ void UI_Mainwindow::horPosDialChanged(int new_pos)
   waveForm->update();
 }
 
-
 void UI_Mainwindow::vertOffsetDialChanged(int new_pos)
 {
-  static int old_pos=50;
+  static int old_pos = 50;
 
   int diff, dir, chn;
 
-  char str[512];
-
   double val;
 
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
@@ -824,45 +669,35 @@ void UI_Mainwindow::vertOffsetDialChanged(int new_pos)
 
   diff = new_pos - old_pos;
 
-  if(diff < 0)
-  {
+  if (diff < 0) {
     diff *= -1;
   }
 
-  if(diff < 6)
-  {
+  if (diff < 6) {
     return;
   }
 
-  if(new_pos > old_pos)
-  {
-    if(diff < 12)
-    {
+  if (new_pos > old_pos) {
+    if (diff < 12) {
       dir = 0;
     }
-    else
-    {
+    else {
       dir = 1;
     }
   }
-  else
-  {
-    if(diff < 12)
-    {
+  else {
+    if (diff < 12) {
       dir = 1;
     }
-    else
-    {
+    else {
       dir = 0;
     }
   }
 
   val = round_up_step125(devparms.chanscale[chn], NULL) / 100;
 
-  if(dir)
-  {
-    if(devparms.chanoffset[chn] <= -20)
-    {
+  if (dir) {
+    if (devparms.chanoffset[chn] <= -20) {
       devparms.chanoffset[chn] = -20;
 
       old_pos = new_pos;
@@ -872,10 +707,8 @@ void UI_Mainwindow::vertOffsetDialChanged(int new_pos)
 
     devparms.chanoffset[chn] -= val;
   }
-  else
-  {
-    if(devparms.chanoffset[chn] >= 20)
-    {
+  else {
+    if (devparms.chanoffset[chn] >= 20) {
       devparms.chanoffset[chn] = 20;
 
       old_pos = new_pos;
@@ -886,11 +719,9 @@ void UI_Mainwindow::vertOffsetDialChanged(int new_pos)
     devparms.chanoffset[chn] += val;
   }
 
-  snprintf(str, 512, "Channel %i offset: ", chn + 1);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.chanoffset[chn], 2, 512 - strlen(str));
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[chn]], 512);
+  auto str = QString("Channel %1 offset: ").arg(chn + 1);
+  str += suffixed_metric_value(devparms.chanoffset[chn], 2);
+  str += QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[chn]], 2);
 
   statusLabel->setText(str);
 
@@ -905,19 +736,15 @@ void UI_Mainwindow::vertOffsetDialChanged(int new_pos)
   waveForm->update();
 }
 
-
 void UI_Mainwindow::vertScaleDialChanged(int new_pos)
 {
-  static int old_pos=50;
+  static int old_pos = 50;
 
   int diff, dir, chn;
 
   double val, ltmp;
 
-  char str[512];
-
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
@@ -925,43 +752,33 @@ void UI_Mainwindow::vertScaleDialChanged(int new_pos)
 
   diff = new_pos - old_pos;
 
-  if(diff < 0)
-  {
+  if (diff < 0) {
     diff *= -1;
   }
 
-  if(diff < 6)
-  {
+  if (diff < 6) {
     return;
   }
 
-  if(new_pos > old_pos)
-  {
-    if(diff < 12)
-    {
+  if (new_pos > old_pos) {
+    if (diff < 12) {
       dir = 0;
     }
-    else
-    {
+    else {
       dir = 1;
     }
   }
-  else
-  {
-    if(diff < 12)
-    {
+  else {
+    if (diff < 12) {
       dir = 1;
     }
-    else
-    {
+    else {
       dir = 0;
     }
   }
 
-  if(dir)
-  {
-    if(devparms.chanscale[chn] >= 20)
-    {
+  if (dir) {
+    if (devparms.chanscale[chn] >= 20) {
       devparms.chanscale[chn] = 20;
 
       old_pos = new_pos;
@@ -969,10 +786,8 @@ void UI_Mainwindow::vertScaleDialChanged(int new_pos)
       return;
     }
   }
-  else
-  {
-    if(devparms.chanscale[chn] <= 1e-2)
-    {
+  else {
+    if (devparms.chanscale[chn] <= 1e-2) {
       devparms.chanscale[chn] = 1e-2;
 
       old_pos = new_pos;
@@ -983,30 +798,24 @@ void UI_Mainwindow::vertScaleDialChanged(int new_pos)
 
   ltmp = devparms.chanscale[chn];
 
-  if(dir || devparms.chanvernier[chn])
-  {
+  if (dir || devparms.chanvernier[chn]) {
     val = round_up_step125(devparms.chanscale[chn], NULL);
   }
-  else
-  {
+  else {
     val = round_down_step125(devparms.chanscale[chn], NULL);
   }
 
-  if(devparms.chanvernier[chn])
-  {
+  if (devparms.chanvernier[chn]) {
     val /= 100;
 
-    if(dir)
-    {
+    if (dir) {
       devparms.chanscale[chn] += val;
     }
-    else
-    {
+    else {
       devparms.chanscale[chn] -= val;
     }
   }
-  else
-  {
+  else {
     devparms.chanscale[chn] = val;
   }
 
@@ -1014,225 +823,186 @@ void UI_Mainwindow::vertScaleDialChanged(int new_pos)
 
   devparms.chanoffset[chn] /= ltmp;
 
-  snprintf(str, 512, "Channel %i scale: ", chn + 1);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.chanscale[chn], 2, 512 - strlen(str));
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[chn]], 512);
-
+  auto str = QString("Channel %1 scale: ").arg(chn + 1);
+  str += suffixed_metric_value(devparms.chanscale[chn], 2);
+  str += QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[chn]], 2);
   statusLabel->setText(str);
 
-  snprintf(str, 512, ":CHAN%i:SCAL %e", chn + 1, devparms.chanscale[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:SCAL %2").arg(chn + 1).arg(devparms.chanscale[chn]).toLocal8Bit().data());
 
   old_pos = new_pos;
 
   waveForm->update();
 }
 
-
 void UI_Mainwindow::acqButtonClicked()
 {
   int chn,
-      chns_on=0,
-      dual=0;
+      chns_on = 0,
+      dual = 0;
 
   QMenu menu,
-        submenuacquisition,
-        submenumemdepth;
+      submenuacquisition,
+      submenumemdepth;
 
   QList<QAction *> actionList;
 
-  for(chn=0; chn<MAX_CHNS; chn++)
-  {
-    if(devparms.chandisplay[chn])
-    {
+  for (chn = 0; chn < MAX_CHNS; chn++) {
+    if (devparms.chandisplay[chn]) {
       chns_on++;
     }
   }
 
-  if((devparms.chandisplay[0] && devparms.chandisplay[1]) || (devparms.chandisplay[2] && devparms.chandisplay[3]))
-  {
+  if ((devparms.chandisplay[0] && devparms.chandisplay[1]) || (devparms.chandisplay[2] && devparms.chandisplay[3])) {
     dual = 1;
   }
 
   submenuacquisition.setTitle("Mode");
-  submenuacquisition.addAction("Normal",  this, SLOT(set_acq_normal()));
+  submenuacquisition.addAction("Normal", this, SLOT(set_acq_normal()));
   submenuacquisition.addAction("Average", this, SLOT(set_acq_average()));
-  submenuacquisition.addAction("Peak Detect",  this, SLOT(set_acq_peak()));
-  submenuacquisition.addAction("High Resolution",  this, SLOT(set_acq_hres()));
+  submenuacquisition.addAction("Peak Detect", this, SLOT(set_acq_peak()));
+  submenuacquisition.addAction("High Resolution", this, SLOT(set_acq_hres()));
   actionList = submenuacquisition.actions();
-  if(devparms.acquiretype == 0)
-  {
+  if (devparms.acquiretype == 0) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else if(devparms.acquiretype == 1)
-    {
-      actionList[1]->setCheckable(true);
-      actionList[1]->setChecked(true);
-    }
-    else if(devparms.acquiretype == 2)
-      {
-        actionList[2]->setCheckable(true);
-        actionList[2]->setChecked(true);
-      }
-      else if(devparms.acquiretype == 3)
-        {
-          actionList[3]->setCheckable(true);
-          actionList[3]->setChecked(true);
-        }
+  else if (devparms.acquiretype == 1) {
+    actionList[1]->setCheckable(true);
+    actionList[1]->setChecked(true);
+  }
+  else if (devparms.acquiretype == 2) {
+    actionList[2]->setCheckable(true);
+    actionList[2]->setChecked(true);
+  }
+  else if (devparms.acquiretype == 3) {
+    actionList[3]->setCheckable(true);
+    actionList[3]->setChecked(true);
+  }
   menu.addMenu(&submenuacquisition);
 
   submenumemdepth.setTitle("Mem Depth");
-  submenumemdepth.addAction("Auto",  this, SLOT(set_memdepth_auto()));
-  if(devparms.modelserie == 6 || devparms.modelserie == 4)
-  {
-    if(!dual)
-    {
-      submenumemdepth.addAction("14K",  this, SLOT(set_memdepth_14k()));
+  submenumemdepth.addAction("Auto", this, SLOT(set_memdepth_auto()));
+  if (devparms.modelserie == 6 || devparms.modelserie == 4) {
+    if (!dual) {
+      submenumemdepth.addAction("14K", this, SLOT(set_memdepth_14k()));
       submenumemdepth.addAction("140K", this, SLOT(set_memdepth_140k()));
       submenumemdepth.addAction("1.4M", this, SLOT(set_memdepth_1400k()));
-      submenumemdepth.addAction("14M",  this, SLOT(set_memdepth_14m()));
+      submenumemdepth.addAction("14M", this, SLOT(set_memdepth_14m()));
       submenumemdepth.addAction("140M", this, SLOT(set_memdepth_140m()));
     }
-    else
-    {
-      submenumemdepth.addAction("7K",   this, SLOT(set_memdepth_7k()));
-      submenumemdepth.addAction("70K",  this, SLOT(set_memdepth_70k()));
+    else {
+      submenumemdepth.addAction("7K", this, SLOT(set_memdepth_7k()));
+      submenumemdepth.addAction("70K", this, SLOT(set_memdepth_70k()));
       submenumemdepth.addAction("700K", this, SLOT(set_memdepth_700k()));
-      submenumemdepth.addAction("7M",   this, SLOT(set_memdepth_7m()));
-      submenumemdepth.addAction("70M",  this, SLOT(set_memdepth_70m()));
+      submenumemdepth.addAction("7M", this, SLOT(set_memdepth_7m()));
+      submenumemdepth.addAction("70M", this, SLOT(set_memdepth_70m()));
     }
   }
-  else if(devparms.modelserie == 2)
-    {
-      if(chns_on < 2)
-      {
-        submenumemdepth.addAction("14K",  this, SLOT(set_memdepth_14k()));
-        submenumemdepth.addAction("140K", this, SLOT(set_memdepth_140k()));
-        submenumemdepth.addAction("1.4M", this, SLOT(set_memdepth_1400k()));
-        submenumemdepth.addAction("14M",  this, SLOT(set_memdepth_14m()));
-        submenumemdepth.addAction("56M", this, SLOT(set_memdepth_56m()));
-      }
-      else
-      {
-        submenumemdepth.addAction("7K",   this, SLOT(set_memdepth_7k()));
-        submenumemdepth.addAction("70K",  this, SLOT(set_memdepth_70k()));
-        submenumemdepth.addAction("700K", this, SLOT(set_memdepth_700k()));
-        submenumemdepth.addAction("7M",   this, SLOT(set_memdepth_7m()));
-        submenumemdepth.addAction("28M",  this, SLOT(set_memdepth_28m()));
-      }
+  else if (devparms.modelserie == 2) {
+    if (chns_on < 2) {
+      submenumemdepth.addAction("14K", this, SLOT(set_memdepth_14k()));
+      submenumemdepth.addAction("140K", this, SLOT(set_memdepth_140k()));
+      submenumemdepth.addAction("1.4M", this, SLOT(set_memdepth_1400k()));
+      submenumemdepth.addAction("14M", this, SLOT(set_memdepth_14m()));
+      submenumemdepth.addAction("56M", this, SLOT(set_memdepth_56m()));
     }
-    else if(devparms.modelserie == 1)
-      {
-      if(chns_on < 2)
-      {
-        submenumemdepth.addAction("12K",  this, SLOT(set_memdepth_12k()));
-        submenumemdepth.addAction("120K", this, SLOT(set_memdepth_120k()));
-        submenumemdepth.addAction("1.2M", this, SLOT(set_memdepth_1200k()));
-        submenumemdepth.addAction("12M",  this, SLOT(set_memdepth_12m()));
-        submenumemdepth.addAction("24M",  this, SLOT(set_memdepth_24m()));
-      }
-      else if(chns_on < 3)
-        {
-          submenumemdepth.addAction("6K",   this, SLOT(set_memdepth_6k()));
-          submenumemdepth.addAction("60K",  this, SLOT(set_memdepth_60k()));
-          submenumemdepth.addAction("600K", this, SLOT(set_memdepth_600k()));
-          submenumemdepth.addAction("6M",   this, SLOT(set_memdepth_6m()));
-          submenumemdepth.addAction("12M",  this, SLOT(set_memdepth_12m()));
-        }
-        else
-        {
-          submenumemdepth.addAction("3K",   this, SLOT(set_memdepth_3k()));
-          submenumemdepth.addAction("30K",  this, SLOT(set_memdepth_30k()));
-          submenumemdepth.addAction("300K", this, SLOT(set_memdepth_300k()));
-          submenumemdepth.addAction("3M",   this, SLOT(set_memdepth_3m()));
-          submenumemdepth.addAction("6M",   this, SLOT(set_memdepth_6m()));
-        }
-      }
+    else {
+      submenumemdepth.addAction("7K", this, SLOT(set_memdepth_7k()));
+      submenumemdepth.addAction("70K", this, SLOT(set_memdepth_70k()));
+      submenumemdepth.addAction("700K", this, SLOT(set_memdepth_700k()));
+      submenumemdepth.addAction("7M", this, SLOT(set_memdepth_7m()));
+      submenumemdepth.addAction("28M", this, SLOT(set_memdepth_28m()));
+    }
+  }
+  else if (devparms.modelserie == 1) {
+    if (chns_on < 2) {
+      submenumemdepth.addAction("12K", this, SLOT(set_memdepth_12k()));
+      submenumemdepth.addAction("120K", this, SLOT(set_memdepth_120k()));
+      submenumemdepth.addAction("1.2M", this, SLOT(set_memdepth_1200k()));
+      submenumemdepth.addAction("12M", this, SLOT(set_memdepth_12m()));
+      submenumemdepth.addAction("24M", this, SLOT(set_memdepth_24m()));
+    }
+    else if (chns_on < 3) {
+      submenumemdepth.addAction("6K", this, SLOT(set_memdepth_6k()));
+      submenumemdepth.addAction("60K", this, SLOT(set_memdepth_60k()));
+      submenumemdepth.addAction("600K", this, SLOT(set_memdepth_600k()));
+      submenumemdepth.addAction("6M", this, SLOT(set_memdepth_6m()));
+      submenumemdepth.addAction("12M", this, SLOT(set_memdepth_12m()));
+    }
+    else {
+      submenumemdepth.addAction("3K", this, SLOT(set_memdepth_3k()));
+      submenumemdepth.addAction("30K", this, SLOT(set_memdepth_30k()));
+      submenumemdepth.addAction("300K", this, SLOT(set_memdepth_300k()));
+      submenumemdepth.addAction("3M", this, SLOT(set_memdepth_3m()));
+      submenumemdepth.addAction("6M", this, SLOT(set_memdepth_6m()));
+    }
+  }
   actionList = submenumemdepth.actions();
-  if(devparms.acquirememdepth == 0)
-  {
+  if (devparms.acquirememdepth == 0) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  if(devparms.modelserie != 1)
-  {
-    if((devparms.acquirememdepth == 14000) || (devparms.acquirememdepth == 7000))
-    {
+  if (devparms.modelserie != 1) {
+    if ((devparms.acquirememdepth == 14000) || (devparms.acquirememdepth == 7000)) {
       actionList[1]->setCheckable(true);
       actionList[1]->setChecked(true);
     }
-    else if((devparms.acquirememdepth == 140000) || (devparms.acquirememdepth == 70000))
-      {
-        actionList[2]->setCheckable(true);
-        actionList[2]->setChecked(true);
-      }
-      else if((devparms.acquirememdepth == 1400000) || (devparms.acquirememdepth == 700000))
-        {
-          actionList[3]->setCheckable(true);
-          actionList[3]->setChecked(true);
-        }
-        else if((devparms.acquirememdepth == 14000000) || (devparms.acquirememdepth == 7000000))
-          {
-            actionList[4]->setCheckable(true);
-            actionList[4]->setChecked(true);
-          }
-          else if((devparms.acquirememdepth == 140000000) || (devparms.acquirememdepth == 70000000)  ||
-                  (devparms.acquirememdepth == 56000000) || (devparms.acquirememdepth == 28000000))
-            {
-              actionList[5]->setCheckable(true);
-              actionList[5]->setChecked(true);
-            }
+    else if ((devparms.acquirememdepth == 140000) || (devparms.acquirememdepth == 70000)) {
+      actionList[2]->setCheckable(true);
+      actionList[2]->setChecked(true);
+    }
+    else if ((devparms.acquirememdepth == 1400000) || (devparms.acquirememdepth == 700000)) {
+      actionList[3]->setCheckable(true);
+      actionList[3]->setChecked(true);
+    }
+    else if ((devparms.acquirememdepth == 14000000) || (devparms.acquirememdepth == 7000000)) {
+      actionList[4]->setCheckable(true);
+      actionList[4]->setChecked(true);
+    }
+    else if ((devparms.acquirememdepth == 140000000) || (devparms.acquirememdepth == 70000000) ||
+        (devparms.acquirememdepth == 56000000) || (devparms.acquirememdepth == 28000000)) {
+      actionList[5]->setCheckable(true);
+      actionList[5]->setChecked(true);
+    }
   }
-  else
-  {
-    if((devparms.acquirememdepth == 12000) || (devparms.acquirememdepth == 6000) ||
-       (devparms.acquirememdepth == 3000))
-    {
+  else {
+    if ((devparms.acquirememdepth == 12000) || (devparms.acquirememdepth == 6000) ||
+        (devparms.acquirememdepth == 3000)) {
       actionList[1]->setCheckable(true);
       actionList[1]->setChecked(true);
     }
-    else if((devparms.acquirememdepth == 120000) || (devparms.acquirememdepth == 60000) ||
-            (devparms.acquirememdepth == 30000))
-      {
-        actionList[2]->setCheckable(true);
-        actionList[2]->setChecked(true);
-      }
-      else if((devparms.acquirememdepth == 1200000) || (devparms.acquirememdepth == 600000) ||
-              (devparms.acquirememdepth == 300000))
-        {
-          actionList[3]->setCheckable(true);
-          actionList[3]->setChecked(true);
-        }
-        else if((devparms.acquirememdepth == 12000000) || (devparms.acquirememdepth == 6000000) ||
-                (devparms.acquirememdepth == 3000000))
-          {
-            actionList[4]->setCheckable(true);
-            actionList[4]->setChecked(true);
-          }
-          else if((devparms.acquirememdepth == 24000000) || (devparms.acquirememdepth == 12000000) ||
-                  (devparms.acquirememdepth == 6000000))
-            {
-              actionList[5]->setCheckable(true);
-              actionList[5]->setChecked(true);
-            }
+    else if ((devparms.acquirememdepth == 120000) || (devparms.acquirememdepth == 60000) ||
+        (devparms.acquirememdepth == 30000)) {
+      actionList[2]->setCheckable(true);
+      actionList[2]->setChecked(true);
+    }
+    else if ((devparms.acquirememdepth == 1200000) || (devparms.acquirememdepth == 600000) ||
+        (devparms.acquirememdepth == 300000)) {
+      actionList[3]->setCheckable(true);
+      actionList[3]->setChecked(true);
+    }
+    else if ((devparms.acquirememdepth == 12000000) || (devparms.acquirememdepth == 6000000) ||
+        (devparms.acquirememdepth == 3000000)) {
+      actionList[4]->setCheckable(true);
+      actionList[4]->setChecked(true);
+    }
+    else if ((devparms.acquirememdepth == 24000000) || (devparms.acquirememdepth == 12000000) ||
+        (devparms.acquirememdepth == 6000000)) {
+      actionList[5]->setCheckable(true);
+      actionList[5]->setChecked(true);
+    }
   }
   menu.addMenu(&submenumemdepth);
 
-  menu.exec(acqButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(acqButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::set_memdepth(int mdepth)
 {
-  char str[512];
-
   QMessageBox msgBox;
 
-  if(devparms.triggerstatus == 5)  // Trigger status is STOP?
+  if (devparms.triggerstatus == 5)  // Trigger status is STOP?
   {
     msgBox.setIcon(QMessageBox::NoIcon);
     msgBox.setText("Can not set memory depth when in STOP mode.\n");
@@ -1240,8 +1010,7 @@ void UI_Mainwindow::set_memdepth(int mdepth)
     return;
   }
 
-  if(mdepth <= 0)
-  {
+  if (mdepth <= 0) {
     statusLabel->setText("Memory depth: auto");
 
     set_cue_cmd(":ACQ:MDEP AUTO");
@@ -1255,15 +1024,11 @@ void UI_Mainwindow::set_memdepth(int mdepth)
     return;
   }
 
-  strlcpy(str, "Memory depth: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), mdepth, 0, 512 - strlen(str));
-
+  QString str{"Memory depth: "};
+  str += suffixed_metric_value(mdepth, 0);
   statusLabel->setText(str);
 
-  snprintf(str, 512, ":ACQ:MDEP %i", mdepth);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":ACQ:MDEP %1").arg(mdepth).toLocal8Bit().data());
 
   devparms.timebaseoffset = 0;
 
@@ -1272,167 +1037,139 @@ void UI_Mainwindow::set_memdepth(int mdepth)
   set_cue_cmd(":TIM:OFFS 0");
 }
 
-
 void UI_Mainwindow::set_memdepth_auto()
 {
   set_memdepth(0);
 }
-
 
 void UI_Mainwindow::set_memdepth_12k()
 {
   set_memdepth(12000);
 }
 
-
 void UI_Mainwindow::set_memdepth_120k()
 {
   set_memdepth(120000);
 }
-
 
 void UI_Mainwindow::set_memdepth_1200k()
 {
   set_memdepth(1200000);
 }
 
-
 void UI_Mainwindow::set_memdepth_12m()
 {
   set_memdepth(12000000);
 }
-
 
 void UI_Mainwindow::set_memdepth_24m()
 {
   set_memdepth(24000000);
 }
 
-
 void UI_Mainwindow::set_memdepth_3k()
 {
   set_memdepth(3000);
 }
-
 
 void UI_Mainwindow::set_memdepth_30k()
 {
   set_memdepth(30000);
 }
 
-
 void UI_Mainwindow::set_memdepth_300k()
 {
   set_memdepth(300000);
 }
-
 
 void UI_Mainwindow::set_memdepth_3m()
 {
   set_memdepth(3000000);
 }
 
-
 void UI_Mainwindow::set_memdepth_6m()
 {
   set_memdepth(6000000);
 }
-
 
 void UI_Mainwindow::set_memdepth_6k()
 {
   set_memdepth(6000);
 }
 
-
 void UI_Mainwindow::set_memdepth_60k()
 {
   set_memdepth(60000);
 }
-
 
 void UI_Mainwindow::set_memdepth_600k()
 {
   set_memdepth(600000);
 }
 
-
 void UI_Mainwindow::set_memdepth_7k()
 {
   set_memdepth(7000);
 }
-
 
 void UI_Mainwindow::set_memdepth_70k()
 {
   set_memdepth(70000);
 }
 
-
 void UI_Mainwindow::set_memdepth_700k()
 {
   set_memdepth(700000);
 }
-
 
 void UI_Mainwindow::set_memdepth_7m()
 {
   set_memdepth(7000000);
 }
 
-
 void UI_Mainwindow::set_memdepth_70m()
 {
   set_memdepth(70000000);
 }
-
 
 void UI_Mainwindow::set_memdepth_14k()
 {
   set_memdepth(14000);
 }
 
-
 void UI_Mainwindow::set_memdepth_140k()
 {
   set_memdepth(140000);
 }
-
 
 void UI_Mainwindow::set_memdepth_1400k()
 {
   set_memdepth(1400000);
 }
 
-
 void UI_Mainwindow::set_memdepth_14m()
 {
   set_memdepth(14000000);
 }
-
 
 void UI_Mainwindow::set_memdepth_140m()
 {
   set_memdepth(140000000);
 }
 
-
 void UI_Mainwindow::set_memdepth_28m()
 {
   set_memdepth(28000000);
 }
-
 
 void UI_Mainwindow::set_memdepth_56m()
 {
   set_memdepth(56000000);
 }
 
-
 void UI_Mainwindow::set_acq_normal()
 {
-  if(devparms.acquiretype == 0)
-  {
+  if (devparms.acquiretype == 0) {
     return;
   }
 
@@ -1443,11 +1180,9 @@ void UI_Mainwindow::set_acq_normal()
   set_cue_cmd(":ACQ:TYPE NORM");
 }
 
-
 void UI_Mainwindow::set_acq_peak()
 {
-  if(devparms.acquiretype == 2)
-  {
+  if (devparms.acquiretype == 2) {
     return;
   }
 
@@ -1458,11 +1193,9 @@ void UI_Mainwindow::set_acq_peak()
   set_cue_cmd(":ACQ:TYPE PEAK");
 }
 
-
 void UI_Mainwindow::set_acq_hres()
 {
-  if(devparms.acquiretype == 3)
-  {
+  if (devparms.acquiretype == 3) {
     return;
   }
 
@@ -1472,7 +1205,6 @@ void UI_Mainwindow::set_acq_hres()
 
   set_cue_cmd(":ACQ:TYPE HRES");
 }
-
 
 void UI_Mainwindow::set_acq_average()
 {
@@ -1484,8 +1216,7 @@ void UI_Mainwindow::set_acq_average()
 
   adjdial_timer->start(ADJDIAL_TIMER_IVAL_1);
 
-  if(devparms.acquiretype == 1)
-  {
+  if (devparms.acquiretype == 1) {
     return;
   }
 
@@ -1496,45 +1227,40 @@ void UI_Mainwindow::set_acq_average()
   set_cue_cmd(":ACQ:TYPE AVER");
 }
 
-
 void UI_Mainwindow::cursButtonClicked()
 {
 }
-
 
 void UI_Mainwindow::saveButtonClicked()
 {
   QMenu menu;
 
   menu.addAction("Save screen waveform", this, SLOT(save_screen_waveform()));
-  menu.addAction("Wave Inspector",       this, SLOT(get_deep_memory_waveform()));
-  menu.addAction("Save screenshot",      this, SLOT(save_screenshot()));
-  menu.addAction("Factory",              this, SLOT(set_to_factory()));
+  menu.addAction("Wave Inspector", this, SLOT(get_deep_memory_waveform()));
+  menu.addAction("Save screenshot", this, SLOT(save_screenshot()));
+  menu.addAction("Factory", this, SLOT(set_to_factory()));
 
-  menu.exec(saveButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(saveButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::dispButtonClicked()
 {
   QMenu menu,
-        submenutype,
-        submenugrid,
-        submenugrading;
+      submenutype,
+      submenugrid,
+      submenugrading;
 
   QList<QAction *> actionList;
 
   submenutype.setTitle("Type");
   submenutype.addAction("Vectors", this, SLOT(set_grid_type_vectors()));
-  submenutype.addAction("Dots",    this, SLOT(set_grid_type_dots()));
+  submenutype.addAction("Dots", this, SLOT(set_grid_type_dots()));
   actionList = submenutype.actions();
-  if(devparms.displaytype == 0)
-  {
+  if (devparms.displaytype == 0) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else
-  {
+  else {
     actionList[1]->setCheckable(true);
     actionList[1]->setChecked(true);
   }
@@ -1545,86 +1271,73 @@ void UI_Mainwindow::dispButtonClicked()
   submenugrid.addAction("Half", this, SLOT(set_grid_half()));
   submenugrid.addAction("None", this, SLOT(set_grid_none()));
   actionList = submenugrid.actions();
-  if(devparms.displaygrid == 2)
-  {
+  if (devparms.displaygrid == 2) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else if(devparms.displaygrid == 1)
-    {
-      actionList[1]->setCheckable(true);
-      actionList[1]->setChecked(true);
-    }
-    else if(devparms.displaygrid == 0)
-      {
-        actionList[2]->setCheckable(true);
-        actionList[2]->setChecked(true);
-      }
+  else if (devparms.displaygrid == 1) {
+    actionList[1]->setCheckable(true);
+    actionList[1]->setChecked(true);
+  }
+  else if (devparms.displaygrid == 0) {
+    actionList[2]->setCheckable(true);
+    actionList[2]->setChecked(true);
+  }
   menu.addMenu(&submenugrid);
 
   submenugrading.setTitle("Persistence");
-  submenugrading.addAction("Minimum",  this, SLOT(set_grading_min()));
+  submenugrading.addAction("Minimum", this, SLOT(set_grading_min()));
 //   submenugrading.addAction("0.05",     this, SLOT(set_grading_005()));
-  submenugrading.addAction("0.1",      this, SLOT(set_grading_01()));
-  submenugrading.addAction("0.2",      this, SLOT(set_grading_02()));
-  submenugrading.addAction("0.5",      this, SLOT(set_grading_05()));
-  submenugrading.addAction("1",        this, SLOT(set_grading_1()));
-  submenugrading.addAction("2",        this, SLOT(set_grading_2()));
-  submenugrading.addAction("5",        this, SLOT(set_grading_5()));
+  submenugrading.addAction("0.1", this, SLOT(set_grading_01()));
+  submenugrading.addAction("0.2", this, SLOT(set_grading_02()));
+  submenugrading.addAction("0.5", this, SLOT(set_grading_05()));
+  submenugrading.addAction("1", this, SLOT(set_grading_1()));
+  submenugrading.addAction("2", this, SLOT(set_grading_2()));
+  submenugrading.addAction("5", this, SLOT(set_grading_5()));
 //   submenugrading.addAction("10",       this, SLOT(set_grading_10()));
 //   submenugrading.addAction("20",       this, SLOT(set_grading_20()));
   submenugrading.addAction("Infinite", this, SLOT(set_grading_inf()));
   actionList = submenugrading.actions();
-  if(devparms.displaygrading == 0)
-  {
+  if (devparms.displaygrading == 0) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else if(devparms.displaygrading == 1)
-    {
-      actionList[1]->setCheckable(true);
-      actionList[1]->setChecked(true);
-    }
-    else if(devparms.displaygrading == 2)
-      {
-        actionList[2]->setCheckable(true);
-        actionList[2]->setChecked(true);
-      }
-      else if(devparms.displaygrading == 5)
-        {
-          actionList[3]->setCheckable(true);
-          actionList[3]->setChecked(true);
-        }
-      else if(devparms.displaygrading == 10)
-        {
-          actionList[4]->setCheckable(true);
-          actionList[4]->setChecked(true);
-        }
-        else if(devparms.displaygrading == 20)
-          {
-            actionList[5]->setCheckable(true);
-            actionList[5]->setChecked(true);
-          }
-          else if(devparms.displaygrading == 50)
-            {
-              actionList[6]->setCheckable(true);
-              actionList[6]->setChecked(true);
-            }
-            else if(devparms.displaygrading == 10000)
-              {
-                actionList[7]->setCheckable(true);
-                actionList[7]->setChecked(true);
-              }
+  else if (devparms.displaygrading == 1) {
+    actionList[1]->setCheckable(true);
+    actionList[1]->setChecked(true);
+  }
+  else if (devparms.displaygrading == 2) {
+    actionList[2]->setCheckable(true);
+    actionList[2]->setChecked(true);
+  }
+  else if (devparms.displaygrading == 5) {
+    actionList[3]->setCheckable(true);
+    actionList[3]->setChecked(true);
+  }
+  else if (devparms.displaygrading == 10) {
+    actionList[4]->setCheckable(true);
+    actionList[4]->setChecked(true);
+  }
+  else if (devparms.displaygrading == 20) {
+    actionList[5]->setCheckable(true);
+    actionList[5]->setChecked(true);
+  }
+  else if (devparms.displaygrading == 50) {
+    actionList[6]->setCheckable(true);
+    actionList[6]->setChecked(true);
+  }
+  else if (devparms.displaygrading == 10000) {
+    actionList[7]->setCheckable(true);
+    actionList[7]->setChecked(true);
+  }
   menu.addMenu(&submenugrading);
 
-  menu.exec(dispButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(dispButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::set_grid_type_vectors()
 {
-  if(!devparms.displaytype)
-  {
+  if (!devparms.displaytype) {
     return;
   }
 
@@ -1635,11 +1348,9 @@ void UI_Mainwindow::set_grid_type_vectors()
   set_cue_cmd(":DISP:TYPE VECT");
 }
 
-
 void UI_Mainwindow::set_grid_type_dots()
 {
-  if(devparms.displaytype)
-  {
+  if (devparms.displaytype) {
     return;
   }
 
@@ -1650,11 +1361,9 @@ void UI_Mainwindow::set_grid_type_dots()
   set_cue_cmd(":DISP:TYPE DOTS");
 }
 
-
 void UI_Mainwindow::set_grid_full()
 {
-  if(devparms.displaygrid == 2)
-  {
+  if (devparms.displaygrid == 2) {
     return;
   }
 
@@ -1665,11 +1374,9 @@ void UI_Mainwindow::set_grid_full()
   set_cue_cmd(":DISP:GRID FULL");
 }
 
-
 void UI_Mainwindow::set_grid_half()
 {
-  if(devparms.displaygrid == 1)
-  {
+  if (devparms.displaygrid == 1) {
     return;
   }
 
@@ -1680,11 +1387,9 @@ void UI_Mainwindow::set_grid_half()
   set_cue_cmd(":DISP:GRID HALF");
 }
 
-
 void UI_Mainwindow::set_grid_none()
 {
-  if(devparms.displaygrid == 0)
-  {
+  if (devparms.displaygrid == 0) {
     return;
   }
 
@@ -1695,11 +1400,9 @@ void UI_Mainwindow::set_grid_none()
   set_cue_cmd(":DISP:GRID NONE");
 }
 
-
 void UI_Mainwindow::set_grading_min()
 {
-  if(devparms.displaygrading == 0)
-  {
+  if (devparms.displaygrading == 0) {
     return;
   }
 
@@ -1710,7 +1413,6 @@ void UI_Mainwindow::set_grading_min()
   set_cue_cmd(":DISP:GRAD:TIME MIN");
 }
 
-
 void UI_Mainwindow::set_grading_005()
 {
   statusLabel->setText("Display grading: 0.05 Sec.");
@@ -1718,11 +1420,9 @@ void UI_Mainwindow::set_grading_005()
   set_cue_cmd(":DISP:GRAD:TIME 0.05");
 }
 
-
 void UI_Mainwindow::set_grading_01()
 {
-  if(devparms.displaygrading == 1)
-  {
+  if (devparms.displaygrading == 1) {
     return;
   }
 
@@ -1733,11 +1433,9 @@ void UI_Mainwindow::set_grading_01()
   set_cue_cmd(":DISP:GRAD:TIME 0.1");
 }
 
-
 void UI_Mainwindow::set_grading_02()
 {
-  if(devparms.displaygrading == 2)
-  {
+  if (devparms.displaygrading == 2) {
     return;
   }
 
@@ -1748,11 +1446,9 @@ void UI_Mainwindow::set_grading_02()
   set_cue_cmd(":DISP:GRAD:TIME 0.2");
 }
 
-
 void UI_Mainwindow::set_grading_05()
 {
-  if(devparms.displaygrading == 5)
-  {
+  if (devparms.displaygrading == 5) {
     return;
   }
 
@@ -1763,11 +1459,9 @@ void UI_Mainwindow::set_grading_05()
   set_cue_cmd(":DISP:GRAD:TIME 0.5");
 }
 
-
 void UI_Mainwindow::set_grading_1()
 {
-  if(devparms.displaygrading == 10)
-  {
+  if (devparms.displaygrading == 10) {
     return;
   }
 
@@ -1778,11 +1472,9 @@ void UI_Mainwindow::set_grading_1()
   set_cue_cmd(":DISP:GRAD:TIME 1");
 }
 
-
 void UI_Mainwindow::set_grading_2()
 {
-  if(devparms.displaygrading == 20)
-  {
+  if (devparms.displaygrading == 20) {
     return;
   }
 
@@ -1793,11 +1485,9 @@ void UI_Mainwindow::set_grading_2()
   set_cue_cmd(":DISP:GRAD:TIME 2");
 }
 
-
 void UI_Mainwindow::set_grading_5()
 {
-  if(devparms.displaygrading == 50)
-  {
+  if (devparms.displaygrading == 50) {
     return;
   }
 
@@ -1808,14 +1498,12 @@ void UI_Mainwindow::set_grading_5()
   set_cue_cmd(":DISP:GRAD:TIME 5");
 }
 
-
 void UI_Mainwindow::set_grading_10()
 {
   statusLabel->setText("Display grading: 10 Sec.");
 
   set_cue_cmd(":DISP:GRAD:TIME 10");
 }
-
 
 void UI_Mainwindow::set_grading_20()
 {
@@ -1824,11 +1512,9 @@ void UI_Mainwindow::set_grading_20()
   set_cue_cmd(":DISP:GRAD:TIME 20");
 }
 
-
 void UI_Mainwindow::set_grading_inf()
 {
-  if(devparms.displaygrading == 10000)
-  {
+  if (devparms.displaygrading == 10000) {
     return;
   }
 
@@ -1839,43 +1525,37 @@ void UI_Mainwindow::set_grading_inf()
   set_cue_cmd(":DISP:GRAD:TIME INF");
 }
 
-
 void UI_Mainwindow::utilButtonClicked()
 {
   QMenu menu;
 
   menu.addAction("Record", this, SLOT(show_playback_window()));
 
-  menu.exec(utilButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(utilButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::show_playback_window()
 {
   UI_playback_window w(this);
 }
 
-
 void UI_Mainwindow::playpauseButtonClicked()
 {
-  if(devparms.func_wrec_enable == 0)  return;
+  if (devparms.func_wrec_enable == 0) return;
 
-  if(devparms.func_wrec_operate)  return;
+  if (devparms.func_wrec_operate) return;
 
-  if(devparms.func_has_record == 0)  return;
+  if (devparms.func_has_record == 0) return;
 
-  if(devparms.func_wplay_operate == 1)
-  {
+  if (devparms.func_wplay_operate == 1) {
     devparms.func_wplay_operate = 2;
 
     statusLabel->setText("Replay paused");
 
     set_cue_cmd(":FUNC:WREP:OPER PAUS");
   }
-  else
-  {
-    if((devparms.modelserie != 1) && (devparms.func_wrec_enable == 1))
-    {
+  else {
+    if ((devparms.modelserie != 1) && (devparms.func_wrec_enable == 1)) {
       set_cue_cmd(":FUNC:WRM PLAY");
 
       devparms.func_wrec_enable = 2;
@@ -1891,36 +1571,32 @@ void UI_Mainwindow::playpauseButtonClicked()
   }
 }
 
-
 void UI_Mainwindow::stopButtonClicked()
 {
-  if(devparms.func_wrec_enable == 0)  return;
+  if (devparms.func_wrec_enable == 0) return;
 
-  if(devparms.func_wrec_operate)
-  {
+  if (devparms.func_wrec_operate) {
     statusLabel->setText("Record off");
 
     set_cue_cmd(":FUNC:WREC:OPER STOP");
   }
 
-  if(devparms.func_wplay_operate)
-  {
+  if (devparms.func_wplay_operate) {
     statusLabel->setText("Replay off");
 
     set_cue_cmd(":FUNC:WREP:OPER STOP");
   }
 }
 
-
 void UI_Mainwindow::recordButtonClicked()
 {
-  if(devparms.func_wrec_enable == 0)  return;
+  if (devparms.func_wrec_enable == 0) return;
 
-  if(devparms.func_wplay_operate)  return;
+  if (devparms.func_wplay_operate) return;
 
-  if(devparms.func_wrec_operate)  return;
+  if (devparms.func_wrec_operate) return;
 
-  if(devparms.func_wrec_enable == 2)  // DS6000 series play mode
+  if (devparms.func_wrec_enable == 2)  // DS6000 series play mode
   {
     set_cue_cmd(":FUNC:WRM REC");
 
@@ -1929,67 +1605,61 @@ void UI_Mainwindow::recordButtonClicked()
 
   statusLabel->setText("Record on");
 
-  if(devparms.modelserie != 1)
-  {
+  if (devparms.modelserie != 1) {
     set_cue_cmd(":FUNC:WREC:OPER REC");
   }
-  else
-  {
+  else {
     set_cue_cmd(":FUNC:WREC:OPER RUN");
   }
 
   devparms.func_has_record = 1;
 }
 
-
 void UI_Mainwindow::helpButtonClicked()
 {
   show_howto_operate();
 }
-
 
 void UI_Mainwindow::show_howto_operate()
 {
   QMessageBox msgBox;
   msgBox.setStandardButtons(QMessageBox::Close);
   msgBox.setText(
-    "Use the mousewheel to change the dials. In order to simulate a push on a dial,"
-    "click on it with the right mouse button.\n"
-    "To toggle the delayed timebase, right-click on the timebase dial.\n"
-    "To set the horizontal position to zero, right-click on the horizontal position dial.\n"
-    "To set the vertical offset to zero, right-click on the vertical position dial.\n\n"
-    "In addition of using the dials to change the scale and offset of the traces and the trigger position,"
-    "you can use the mouse to drag the colored arrows aside of the plot.\n\n"
-    "Keyboard shortcuts:\n"
-    "PageUp: move traces 12 (or 14) divisions to the right.\n"
-    "PageDn: move traces 12 (or 14) divisions to the left.\n"
-    "Arrow left: move traces 1 division to the right.\n"
-    "Arrow right: move traces 1 division to the left.\n"
-    "Arrow up: move active trace 1 division up.\n"
-    "Arrow down: move active trace 1 division down.\n"
-    "Zoom In (decrease timebase): Ctl+\n"
-    "Zoom Out (increase timebase): Ctl-\n"
-    "Increase vertical scale: -\n"
-    "Decrease vertical scale: +\n"
-    "Increase vertical scale for all active channels: Shift-\n"
-    "Decrease vertical scale for all active channels: Shift+\n"
-    "Press '1' to select or deselect channel 1\n"
-    "Press '2' to select or deselect channel 2, etc.\n"
-    "Press 'c' to center the horizontal position.\n"
-    "Press 't' to center the trigger position.\n"
-    "Press 'f' to toggle FFT.\n"
-    "Press 'ctrl+p' to save a screenshot.\n"
-    );
+      "Use the mousewheel to change the dials. In order to simulate a push on a dial,"
+      "click on it with the right mouse button.\n"
+      "To toggle the delayed timebase, right-click on the timebase dial.\n"
+      "To set the horizontal position to zero, right-click on the horizontal position dial.\n"
+      "To set the vertical offset to zero, right-click on the vertical position dial.\n\n"
+      "In addition of using the dials to change the scale and offset of the traces and the trigger position,"
+      "you can use the mouse to drag the colored arrows aside of the plot.\n\n"
+      "Keyboard shortcuts:\n"
+      "PageUp: move traces 12 (or 14) divisions to the right.\n"
+      "PageDn: move traces 12 (or 14) divisions to the left.\n"
+      "Arrow left: move traces 1 division to the right.\n"
+      "Arrow right: move traces 1 division to the left.\n"
+      "Arrow up: move active trace 1 division up.\n"
+      "Arrow down: move active trace 1 division down.\n"
+      "Zoom In (decrease timebase): Ctl+\n"
+      "Zoom Out (increase timebase): Ctl-\n"
+      "Increase vertical scale: -\n"
+      "Decrease vertical scale: +\n"
+      "Increase vertical scale for all active channels: Shift-\n"
+      "Decrease vertical scale for all active channels: Shift+\n"
+      "Press '1' to select or deselect channel 1\n"
+      "Press '2' to select or deselect channel 2, etc.\n"
+      "Press 'c' to center the horizontal position.\n"
+      "Press 't' to center the trigger position.\n"
+      "Press 'f' to toggle FFT.\n"
+      "Press 'ctrl+p' to save a screenshot.\n"
+  );
 
   msgBox.exec();
 }
-
 
 void UI_Mainwindow::show_about_dialog()
 {
   UI_Aboutwindow aboutwindow;
 }
-
 
 void UI_Mainwindow::vertScaleDialClicked(QPoint)
 {
@@ -1997,15 +1667,13 @@ void UI_Mainwindow::vertScaleDialClicked(QPoint)
 
   char str[512];
 
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
   chn = devparms.activechannel;
 
-  if(devparms.chanvernier[chn])
-  {
+  if (devparms.chanvernier[chn]) {
     devparms.chanvernier[chn] = 0;
 
     snprintf(str, 512, "Channel %i vernier: off", chn + 1);
@@ -2016,8 +1684,7 @@ void UI_Mainwindow::vertScaleDialClicked(QPoint)
 
     set_cue_cmd(str);
   }
-  else
-  {
+  else {
     devparms.chanvernier[chn] = 1;
 
     snprintf(str, 512, "Channel %i vernier: on", chn + 1);
@@ -2030,13 +1697,10 @@ void UI_Mainwindow::vertScaleDialClicked(QPoint)
   }
 }
 
-
 void UI_Mainwindow::ch1ButtonClicked()
 {
-  if(devparms.chandisplay[0])
-  {
-    if(devparms.activechannel == 0)
-    {
+  if (devparms.chandisplay[0]) {
+    if (devparms.activechannel == 0) {
       devparms.chandisplay[0] = 0;
 
       statusLabel->setText("Channel 1 off");
@@ -2047,23 +1711,19 @@ void UI_Mainwindow::ch1ButtonClicked()
 
       devparms.activechannel = -1;
 
-      for(int i=0; i<MAX_CHNS; i++)
-      {
-        if(devparms.chandisplay[i])
-        {
+      for (int i = 0; i < MAX_CHNS; i++) {
+        if (devparms.chandisplay[i]) {
           devparms.activechannel = i;
 
           break;
         }
       }
     }
-    else
-    {
+    else {
       devparms.activechannel = 0;
     }
   }
-  else
-  {
+  else {
     devparms.chandisplay[0] = 1;
 
     statusLabel->setText("Channel 1 on");
@@ -2076,18 +1736,14 @@ void UI_Mainwindow::ch1ButtonClicked()
   }
 }
 
-
 void UI_Mainwindow::ch2ButtonClicked()
 {
-  if(devparms.channel_cnt < 2)
-  {
+  if (devparms.channel_cnt < 2) {
     return;
   }
 
-  if(devparms.chandisplay[1])
-  {
-    if(devparms.activechannel == 1)
-    {
+  if (devparms.chandisplay[1]) {
+    if (devparms.activechannel == 1) {
       devparms.chandisplay[1] = 0;
 
       statusLabel->setText("Channel 2 off");
@@ -2098,23 +1754,19 @@ void UI_Mainwindow::ch2ButtonClicked()
 
       devparms.activechannel = -1;
 
-      for(int i=0; i<MAX_CHNS; i++)
-      {
-        if(devparms.chandisplay[i])
-        {
+      for (int i = 0; i < MAX_CHNS; i++) {
+        if (devparms.chandisplay[i]) {
           devparms.activechannel = i;
 
           break;
         }
       }
     }
-    else
-    {
+    else {
       devparms.activechannel = 1;
     }
   }
-  else
-  {
+  else {
     devparms.chandisplay[1] = 1;
 
     statusLabel->setText("Channel 2 on");
@@ -2127,18 +1779,14 @@ void UI_Mainwindow::ch2ButtonClicked()
   }
 }
 
-
 void UI_Mainwindow::ch3ButtonClicked()
 {
-  if(devparms.channel_cnt < 3)
-  {
+  if (devparms.channel_cnt < 3) {
     return;
   }
 
-  if(devparms.chandisplay[2])
-  {
-    if(devparms.activechannel == 2)
-    {
+  if (devparms.chandisplay[2]) {
+    if (devparms.activechannel == 2) {
       devparms.chandisplay[2] = 0;
 
       statusLabel->setText("Channel 3 off");
@@ -2149,23 +1797,19 @@ void UI_Mainwindow::ch3ButtonClicked()
 
       devparms.activechannel = -1;
 
-      for(int i=0; i<MAX_CHNS; i++)
-      {
-        if(devparms.chandisplay[i])
-        {
+      for (int i = 0; i < MAX_CHNS; i++) {
+        if (devparms.chandisplay[i]) {
           devparms.activechannel = i;
 
           break;
         }
       }
     }
-    else
-    {
+    else {
       devparms.activechannel = 2;
     }
   }
-  else
-  {
+  else {
     devparms.chandisplay[2] = 1;
 
     statusLabel->setText("Channel 3 on");
@@ -2178,18 +1822,14 @@ void UI_Mainwindow::ch3ButtonClicked()
   }
 }
 
-
 void UI_Mainwindow::ch4ButtonClicked()
 {
-  if(devparms.channel_cnt < 4)
-  {
+  if (devparms.channel_cnt < 4) {
     return;
   }
 
-  if(devparms.chandisplay[3])
-  {
-    if(devparms.activechannel == 3)
-    {
+  if (devparms.chandisplay[3]) {
+    if (devparms.activechannel == 3) {
       devparms.chandisplay[3] = 0;
 
       statusLabel->setText("Channel 4 off");
@@ -2200,23 +1840,19 @@ void UI_Mainwindow::ch4ButtonClicked()
 
       devparms.activechannel = -1;
 
-      for(int i=0; i<MAX_CHNS; i++)
-      {
-        if(devparms.chandisplay[i])
-        {
+      for (int i = 0; i < MAX_CHNS; i++) {
+        if (devparms.chandisplay[i]) {
           devparms.activechannel = i;
 
           break;
         }
       }
     }
-    else
-    {
+    else {
       devparms.activechannel = 3;
     }
   }
-  else
-  {
+  else {
     devparms.chandisplay[3] = 1;
 
     statusLabel->setText("Channel 4 on");
@@ -2229,333 +1865,271 @@ void UI_Mainwindow::ch4ButtonClicked()
   }
 }
 
-
 void UI_Mainwindow::chan_menu()
 {
   QMenu menu,
-        submenubwl,
-        submenucoupling,
-        submenuinvert,
-        submenuprobe,
-        submenuunit;
+      submenubwl,
+      submenucoupling,
+      submenuinvert,
+      submenuprobe,
+      submenuunit;
 
   QList<QAction *> actionList;
 
-  if((devparms.activechannel < 0) || (devparms.activechannel > MAX_CHNS))
-  {
+  if ((devparms.activechannel < 0) || (devparms.activechannel > MAX_CHNS)) {
     return;
   }
 
   submenucoupling.setTitle("Coupling");
-  submenucoupling.addAction("AC",  this, SLOT(chan_coupling_ac()));
-  submenucoupling.addAction("DC",  this, SLOT(chan_coupling_dc()));
+  submenucoupling.addAction("AC", this, SLOT(chan_coupling_ac()));
+  submenucoupling.addAction("DC", this, SLOT(chan_coupling_dc()));
   submenucoupling.addAction("GND", this, SLOT(chan_coupling_gnd()));
   actionList = submenucoupling.actions();
-  if(devparms.chancoupling[devparms.activechannel] == 0)
-  {
+  if (devparms.chancoupling[devparms.activechannel] == 0) {
     actionList[2]->setCheckable(true);
     actionList[2]->setChecked(true);
   }
-  else if(devparms.chancoupling[devparms.activechannel] == 1)
-    {
-      actionList[1]->setCheckable(true);
-      actionList[1]->setChecked(true);
-    }
-    else if(devparms.chancoupling[devparms.activechannel] == 2)
-      {
-        actionList[0]->setCheckable(true);
-        actionList[0]->setChecked(true);
-      }
-  menu.addMenu(&submenucoupling);
-
-  submenubwl.setTitle("BWL");
-  submenubwl.addAction("Off",    this, SLOT(chan_bwl_off()));
-  submenubwl.addAction("20MHz",  this, SLOT(chan_bwl_20()));
-  if(devparms.modelserie == 4)
-  {
-    if(devparms.bandwidth >= 200)
-    {
-      submenubwl.addAction("100MHz", this, SLOT(chan_bwl_100()));
-    }
-
-    if(devparms.bandwidth >= 300)
-    {
-      submenubwl.addAction("200MHz", this, SLOT(chan_bwl_200()));
-    }
+  else if (devparms.chancoupling[devparms.activechannel] == 1) {
+    actionList[1]->setCheckable(true);
+    actionList[1]->setChecked(true);
   }
-  if(devparms.modelserie == 6)
-  {
-    submenubwl.addAction("250MHz", this, SLOT(chan_bwl_250()));
-  }
-  actionList = submenubwl.actions();
-  if(devparms.chanbwlimit[devparms.activechannel] == 0)
-  {
+  else if (devparms.chancoupling[devparms.activechannel] == 2) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else if(devparms.chanbwlimit[devparms.activechannel] == 20)
-    {
-      actionList[1]->setCheckable(true);
-      actionList[1]->setChecked(true);
-    }
-    else if(devparms.modelserie == 4)
-      {
-        if(devparms.chanbwlimit[devparms.activechannel] == 100)
-        {
-          actionList[2]->setCheckable(true);
-          actionList[2]->setChecked(true);
-        }
+  menu.addMenu(&submenucoupling);
 
-        if(devparms.chanbwlimit[devparms.activechannel] == 200)
-        {
-          actionList[3]->setCheckable(true);
-          actionList[3]->setChecked(true);
-        }
-      }
-      else if(devparms.modelserie == 6)
-        {
-          if(devparms.chanbwlimit[devparms.activechannel] == 250)
-          {
-            actionList[2]->setCheckable(true);
-            actionList[2]->setChecked(true);
-          }
-        }
+  submenubwl.setTitle("BWL");
+  submenubwl.addAction("Off", this, SLOT(chan_bwl_off()));
+  submenubwl.addAction("20MHz", this, SLOT(chan_bwl_20()));
+  if (devparms.modelserie == 4) {
+    if (devparms.bandwidth >= 200) {
+      submenubwl.addAction("100MHz", this, SLOT(chan_bwl_100()));
+    }
+
+    if (devparms.bandwidth >= 300) {
+      submenubwl.addAction("200MHz", this, SLOT(chan_bwl_200()));
+    }
+  }
+  if (devparms.modelserie == 6) {
+    submenubwl.addAction("250MHz", this, SLOT(chan_bwl_250()));
+  }
+  actionList = submenubwl.actions();
+  if (devparms.chanbwlimit[devparms.activechannel] == 0) {
+    actionList[0]->setCheckable(true);
+    actionList[0]->setChecked(true);
+  }
+  else if (devparms.chanbwlimit[devparms.activechannel] == 20) {
+    actionList[1]->setCheckable(true);
+    actionList[1]->setChecked(true);
+  }
+  else if (devparms.modelserie == 4) {
+    if (devparms.chanbwlimit[devparms.activechannel] == 100) {
+      actionList[2]->setCheckable(true);
+      actionList[2]->setChecked(true);
+    }
+
+    if (devparms.chanbwlimit[devparms.activechannel] == 200) {
+      actionList[3]->setCheckable(true);
+      actionList[3]->setChecked(true);
+    }
+  }
+  else if (devparms.modelserie == 6) {
+    if (devparms.chanbwlimit[devparms.activechannel] == 250) {
+      actionList[2]->setCheckable(true);
+      actionList[2]->setChecked(true);
+    }
+  }
   menu.addMenu(&submenubwl);
 
   submenuprobe.setTitle("Probe");
-  if(devparms.modelserie != 6)
-  {
+  if (devparms.modelserie != 6) {
     submenuprobe.addAction("0.01X", this, SLOT(chan_probe_001()));
     submenuprobe.addAction("0.02X", this, SLOT(chan_probe_002()));
     submenuprobe.addAction("0.05X", this, SLOT(chan_probe_005()));
   }
   submenuprobe.addAction("0.1X", this, SLOT(chan_probe_01()));
-  if(devparms.modelserie != 6)
-  {
+  if (devparms.modelserie != 6) {
     submenuprobe.addAction("0.2X", this, SLOT(chan_probe_02()));
     submenuprobe.addAction("0.5X", this, SLOT(chan_probe_05()));
   }
-  submenuprobe.addAction("1X",   this, SLOT(chan_probe_1()));
-  if(devparms.modelserie != 6)
-  {
-    submenuprobe.addAction("2X",   this, SLOT(chan_probe_2()));
-    submenuprobe.addAction("5X",   this, SLOT(chan_probe_5()));
+  submenuprobe.addAction("1X", this, SLOT(chan_probe_1()));
+  if (devparms.modelserie != 6) {
+    submenuprobe.addAction("2X", this, SLOT(chan_probe_2()));
+    submenuprobe.addAction("5X", this, SLOT(chan_probe_5()));
   }
-  submenuprobe.addAction("10X",  this, SLOT(chan_probe_10()));
-  if(devparms.modelserie != 6)
-  {
-    submenuprobe.addAction("20X",  this, SLOT(chan_probe_20()));
-    submenuprobe.addAction("50X",  this, SLOT(chan_probe_50()));
+  submenuprobe.addAction("10X", this, SLOT(chan_probe_10()));
+  if (devparms.modelserie != 6) {
+    submenuprobe.addAction("20X", this, SLOT(chan_probe_20()));
+    submenuprobe.addAction("50X", this, SLOT(chan_probe_50()));
   }
   submenuprobe.addAction("100X", this, SLOT(chan_probe_100()));
-  if(devparms.modelserie != 6)
-  {
-    submenuprobe.addAction("200X",  this, SLOT(chan_probe_200()));
-    submenuprobe.addAction("500X",  this, SLOT(chan_probe_500()));
-    submenuprobe.addAction("1000X",  this, SLOT(chan_probe_1000()));
+  if (devparms.modelserie != 6) {
+    submenuprobe.addAction("200X", this, SLOT(chan_probe_200()));
+    submenuprobe.addAction("500X", this, SLOT(chan_probe_500()));
+    submenuprobe.addAction("1000X", this, SLOT(chan_probe_1000()));
   }
   actionList = submenuprobe.actions();
-  if(devparms.modelserie != 6)
-  {
-    if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.01))
-    {
+  if (devparms.modelserie != 6) {
+    if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.01)) {
       actionList[0]->setCheckable(true);
       actionList[0]->setChecked(true);
     }
-    else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.02))
-      {
-        actionList[1]->setCheckable(true);
-        actionList[1]->setChecked(true);
-      }
-      else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.05))
-        {
-          actionList[2]->setCheckable(true);
-          actionList[2]->setChecked(true);
-        }
-        else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.1))
-          {
-            actionList[3]->setCheckable(true);
-            actionList[3]->setChecked(true);
-          }
-          else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.2))
-            {
-              actionList[4]->setCheckable(true);
-              actionList[4]->setChecked(true);
-            }
-            else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.5))
-              {
-                actionList[5]->setCheckable(true);
-                actionList[5]->setChecked(true);
-              }
-              else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 1))
-                {
-                  actionList[6]->setCheckable(true);
-                  actionList[6]->setChecked(true);
-                }
-                else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 2))
-                  {
-                    actionList[7]->setCheckable(true);
-                    actionList[7]->setChecked(true);
-                  }
-                  else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 5))
-                    {
-                      actionList[8]->setCheckable(true);
-                      actionList[8]->setChecked(true);
-                    }
-                    else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 10))
-                      {
-                        actionList[9]->setCheckable(true);
-                        actionList[9]->setChecked(true);
-                      }
-                      else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 20))
-                        {
-                          actionList[10]->setCheckable(true);
-                          actionList[10]->setChecked(true);
-                        }
-                        else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 50))
-                          {
-                            actionList[11]->setCheckable(true);
-                            actionList[11]->setChecked(true);
-                          }
-                          else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 100))
-                            {
-                              actionList[12]->setCheckable(true);
-                              actionList[12]->setChecked(true);
-                            }
-                            else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 200))
-                              {
-                                actionList[13]->setCheckable(true);
-                                actionList[13]->setChecked(true);
-                              }
-                              else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 500))
-                                {
-                                  actionList[14]->setCheckable(true);
-                                  actionList[14]->setChecked(true);
-                                }
-                                else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 1000))
-                                  {
-                                    actionList[15]->setCheckable(true);
-                                    actionList[15]->setChecked(true);
-                                  }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.02)) {
+      actionList[1]->setCheckable(true);
+      actionList[1]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.05)) {
+      actionList[2]->setCheckable(true);
+      actionList[2]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.1)) {
+      actionList[3]->setCheckable(true);
+      actionList[3]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.2)) {
+      actionList[4]->setCheckable(true);
+      actionList[4]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.5)) {
+      actionList[5]->setCheckable(true);
+      actionList[5]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 1)) {
+      actionList[6]->setCheckable(true);
+      actionList[6]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 2)) {
+      actionList[7]->setCheckable(true);
+      actionList[7]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 5)) {
+      actionList[8]->setCheckable(true);
+      actionList[8]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 10)) {
+      actionList[9]->setCheckable(true);
+      actionList[9]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 20)) {
+      actionList[10]->setCheckable(true);
+      actionList[10]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 50)) {
+      actionList[11]->setCheckable(true);
+      actionList[11]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 100)) {
+      actionList[12]->setCheckable(true);
+      actionList[12]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 200)) {
+      actionList[13]->setCheckable(true);
+      actionList[13]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 500)) {
+      actionList[14]->setCheckable(true);
+      actionList[14]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 1000)) {
+      actionList[15]->setCheckable(true);
+      actionList[15]->setChecked(true);
+    }
   }
-  else
-  {
-    if(!dblcmp(devparms.chanprobe[devparms.activechannel], 0.1))
-    {
+  else {
+    if (!dblcmp(devparms.chanprobe[devparms.activechannel], 0.1)) {
       actionList[0]->setCheckable(true);
       actionList[0]->setChecked(true);
     }
-    else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 1))
-      {
-        actionList[1]->setCheckable(true);
-        actionList[1]->setChecked(true);
-      }
-      else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 10))
-        {
-          actionList[2]->setCheckable(true);
-          actionList[2]->setChecked(true);
-        }
-        else if(!dblcmp(devparms.chanprobe[devparms.activechannel], 100))
-          {
-            actionList[3]->setCheckable(true);
-            actionList[3]->setChecked(true);
-          }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 1)) {
+      actionList[1]->setCheckable(true);
+      actionList[1]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 10)) {
+      actionList[2]->setCheckable(true);
+      actionList[2]->setChecked(true);
+    }
+    else if (!dblcmp(devparms.chanprobe[devparms.activechannel], 100)) {
+      actionList[3]->setCheckable(true);
+      actionList[3]->setChecked(true);
+    }
   }
   menu.addMenu(&submenuprobe);
 
   submenuinvert.setTitle("Invert");
-  submenuinvert.addAction("On",  this, SLOT(chan_invert_on()));
+  submenuinvert.addAction("On", this, SLOT(chan_invert_on()));
   submenuinvert.addAction("Off", this, SLOT(chan_invert_off()));
   actionList = submenuinvert.actions();
-  if(devparms.chaninvert[devparms.activechannel] == 1)
-  {
+  if (devparms.chaninvert[devparms.activechannel] == 1) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else
-  {
+  else {
     actionList[1]->setCheckable(true);
     actionList[1]->setChecked(true);
   }
   menu.addMenu(&submenuinvert);
 
   submenuunit.setTitle("Unit");
-  submenuunit.addAction("Volt",    this, SLOT(chan_unit_v()));
-  submenuunit.addAction("Watt",    this, SLOT(chan_unit_w()));
-  submenuunit.addAction("Ampere",  this, SLOT(chan_unit_a()));
+  submenuunit.addAction("Volt", this, SLOT(chan_unit_v()));
+  submenuunit.addAction("Watt", this, SLOT(chan_unit_w()));
+  submenuunit.addAction("Ampere", this, SLOT(chan_unit_a()));
   submenuunit.addAction("Unknown", this, SLOT(chan_unit_u()));
   actionList = submenuunit.actions();
   actionList[devparms.chanunit[devparms.activechannel]]->setCheckable(true);
   actionList[devparms.chanunit[devparms.activechannel]]->setChecked(true);
   menu.addMenu(&submenuunit);
 
-  menu.exec(chanMenuButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(chanMenuButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::math_menu()
 {
-  char str[512];
-
   double val;
 
   QMenu menu,
-        submenufft,
-        submenufftctr,
-        submenuffthzdiv,
-        submenufftsrc,
-        submenufftvscale,
-        submenufftoffset;
+      submenufft,
+      submenufftctr,
+      submenuffthzdiv,
+      submenufftsrc,
+      submenufftvscale,
+      submenufftoffset;
 
   QList<QAction *> actionList;
 
-  if((devparms.activechannel < 0) || (devparms.activechannel > MAX_CHNS))
-  {
+  if ((devparms.activechannel < 0) || (devparms.activechannel > MAX_CHNS)) {
     return;
   }
 
-  if(devparms.timebasedelayenable)
-  {
+  if (devparms.timebasedelayenable) {
     val = 100.0 / devparms.timebasedelayscale;
   }
-  else
-  {
+  else {
     val = 100.0 / devparms.timebasescale;
   }
 
   submenufftctr.setTitle("Center");
-  convert_to_metric_suffix(str, devparms.math_fft_hscale * 5.0 , 1, 512);
-  strlcat(str, "Hz", 512);
-  submenufftctr.addAction(str, this, SLOT(select_fft_ctr_5()));
-  convert_to_metric_suffix(str, devparms.math_fft_hscale * 6.0 , 1, 512);
-  strlcat(str, "Hz", 512);
-  submenufftctr.addAction(str, this, SLOT(select_fft_ctr_6()));
-  convert_to_metric_suffix(str, devparms.math_fft_hscale * 7.0 , 1, 512);
-  strlcat(str, "Hz", 512);
-  submenufftctr.addAction(str, this, SLOT(select_fft_ctr_7()));
-  convert_to_metric_suffix(str, devparms.math_fft_hscale * 8.0 , 1, 512);
-  strlcat(str, "Hz", 512);
-  submenufftctr.addAction(str, this, SLOT(select_fft_ctr_8()));
-  if((devparms.math_fft_hscale * 9.0) < (val * 0.40001))
-  {
-    convert_to_metric_suffix(str, devparms.math_fft_hscale * 9.0 , 1, 512);
-    strlcat(str, "Hz", 512);
-    submenufftctr.addAction(str, this, SLOT(select_fft_ctr_9()));
-    if((devparms.math_fft_hscale * 10.0) < (val * 0.40001))
-    {
-      convert_to_metric_suffix(str, devparms.math_fft_hscale * 10.0 , 1, 512);
-      strlcat(str, "Hz", 512);
-      submenufftctr.addAction(str, this, SLOT(select_fft_ctr_10()));
-      if((devparms.math_fft_hscale * 11.0) < (val * 0.40001))
-      {
-        convert_to_metric_suffix(str, devparms.math_fft_hscale * 11.0 , 1, 512);
-        strlcat(str, "Hz", 512);
-        submenufftctr.addAction(str, this, SLOT(select_fft_ctr_11()));
-        if((devparms.math_fft_hscale * 12.0) < (val * 0.40001))
-        {
-          convert_to_metric_suffix(str, devparms.math_fft_hscale * 12.0 , 1, 512);
-          strlcat(str, "Hz", 512);
-          submenufftctr.addAction(str, this, SLOT(select_fft_ctr_12()));
+  QString centerTmpl{"1Hz"};
+  submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 5.0, 1)),
+                          this, SLOT(select_fft_ctr_5()));
+  submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 6.0, 1)),
+                          this, SLOT(select_fft_ctr_6()));
+  submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 7.0, 1)),
+                          this, SLOT(select_fft_ctr_7()));
+  submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 8.0, 1)),
+                          this, SLOT(select_fft_ctr_8()));
+  if ((devparms.math_fft_hscale * 9.0) < (val * 0.40001)) {
+    submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 9.0, 1)),
+                            this, SLOT(select_fft_ctr_9()));
+    if ((devparms.math_fft_hscale * 10.0) < (val * 0.40001)) {
+      submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 10.0, 1)),
+                              this, SLOT(select_fft_ctr_10()));
+      if ((devparms.math_fft_hscale * 11.0) < (val * 0.40001)) {
+        submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 11.0, 1)),
+                                this, SLOT(select_fft_ctr_11()));
+        if ((devparms.math_fft_hscale * 12.0) < (val * 0.40001)) {
+          submenufftctr.addAction(centerTmpl.arg(suffixed_metric_value(devparms.math_fft_hscale * 12.0, 1)),
+                                  this, SLOT(select_fft_ctr_12()));
         }
       }
     }
@@ -2576,126 +2150,109 @@ void UI_Mainwindow::math_menu()
 //   }
 //   else
 //   {
-    convert_to_metric_suffix(str, val / 20.0 , 2, 512);
-    strlcat(str, "Hz/Div", 512);
-    submenuffthzdiv.addAction(str, this, SLOT(select_fft_hzdiv_20()));
-    convert_to_metric_suffix(str, val / 40.0 , 2, 512);
-    strlcat(str, "Hz/Div", 512);
-    submenuffthzdiv.addAction(str, this, SLOT(select_fft_hzdiv_40()));
-    convert_to_metric_suffix(str, val / 100.0 , 2, 512);
-    strlcat(str, "Hz/Div", 512);
-    submenuffthzdiv.addAction(str, this, SLOT(select_fft_hzdiv_100()));
-    convert_to_metric_suffix(str, val / 200.0 , 2, 512);
-    strlcat(str, "Hz/Div", 512);
-    submenuffthzdiv.addAction(str, this, SLOT(select_fft_hzdiv_200()));
+  QString ffthzDivTmpl{"%1Hz/Div"};
+  submenuffthzdiv.addAction(ffthzDivTmpl.arg(suffixed_metric_value(val / 20.0, 2)),
+                            this, SLOT(select_fft_hzdiv_20()));
+  submenuffthzdiv.addAction(ffthzDivTmpl.arg(suffixed_metric_value(val / 40.0, 2)),
+                            this, SLOT(select_fft_hzdiv_40()));
+  submenuffthzdiv.addAction(ffthzDivTmpl.arg(suffixed_metric_value(val / 100.0, 2)),
+                            this, SLOT(select_fft_hzdiv_100()));
+  submenuffthzdiv.addAction(ffthzDivTmpl.arg(suffixed_metric_value(val / 200.0, 2)),
+                            this, SLOT(select_fft_hzdiv_200()));
+
 //  }
 
   submenufftoffset.setTitle("Offset");
-  if(devparms.math_fft_unit == 0)
-  {
-    convert_to_metric_suffix(str, devparms.fft_vscale * 4.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp4()));
-    convert_to_metric_suffix(str, devparms.fft_vscale * 3.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp3()));
-    convert_to_metric_suffix(str, devparms.fft_vscale * 2.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp2()));
-    convert_to_metric_suffix(str, devparms.fft_vscale, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp1()));
-    strlcpy(str, "0V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffset0()));
-    convert_to_metric_suffix(str, devparms.fft_vscale * -1.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm1()));
-    convert_to_metric_suffix(str, devparms.fft_vscale * -2.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm2()));
-    convert_to_metric_suffix(str, devparms.fft_vscale * -3.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm3()));
-    convert_to_metric_suffix(str, devparms.fft_vscale * -4.0, 1, 512);
-    strlcat(str, "V", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm4()));
+  if (devparms.math_fft_unit == 0) {
+    QString offsetTmpl{"%1V"};
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * 4.0, 1)),
+                               this, SLOT(select_fft_voffsetp4()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * 3.0, 1)),
+                               this, SLOT(select_fft_voffsetp3()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * 2.0, 1)),
+                               this, SLOT(select_fft_voffsetp2()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale, 1)),
+                               this, SLOT(select_fft_voffsetp1()));
+    submenufftoffset.addAction(offsetTmpl.arg(0),
+                               this, SLOT(select_fft_voffset0()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * -1.0, 1)),
+                               this, SLOT(select_fft_voffsetm1()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * -2.0, 1)),
+                               this, SLOT(select_fft_voffsetm2()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * -3.0, 1)),
+                               this, SLOT(select_fft_voffsetm3()));
+    submenufftoffset.addAction(offsetTmpl.arg(suffixed_metric_value(devparms.fft_vscale * -4.0, 1)),
+                               this, SLOT(select_fft_voffsetm4()));
   }
-  else
-  {
-    snprintf(str, 512, "%+.0fdB", devparms.fft_vscale * 4.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp4()));
-    snprintf(str, 512, "%+.0fdB", devparms.fft_vscale * 3.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp3()));
-    snprintf(str, 512, "%+.0fdB", devparms.fft_vscale * 2.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp2()));
-    snprintf(str, 512, "%+.0fdB", devparms.fft_vscale);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetp1()));
-    strlcpy(str, "0dB", 512);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffset0()));
-    snprintf(str, 512, "%.0fdB", devparms.fft_vscale * -1.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm1()));
-    snprintf(str, 512, "%.0fdB", devparms.fft_vscale * -2.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm2()));
-    snprintf(str, 512, "%.0fdB", devparms.fft_vscale * -3.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm3()));
-    snprintf(str, 512, "%.0fdB", devparms.fft_vscale * -4.0);
-    submenufftoffset.addAction(str, this, SLOT(select_fft_voffsetm4()));
+  else {
+    QString offsetTmpl{"%1db"};
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * 4.0),
+                               this, SLOT(select_fft_voffsetp4()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * 3.0),
+                               this, SLOT(select_fft_voffsetp3()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * 2.0),
+                               this, SLOT(select_fft_voffsetp2()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale),
+                               this, SLOT(select_fft_voffsetp1()));
+    submenufftoffset.addAction(offsetTmpl.arg(0),
+                               this, SLOT(select_fft_voffset0()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * -1.0),
+                               this, SLOT(select_fft_voffsetm1()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * -2.0),
+                               this, SLOT(select_fft_voffsetm2()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * -3.0),
+                               this, SLOT(select_fft_voffsetm3()));
+    submenufftoffset.addAction(offsetTmpl.arg(devparms.fft_vscale * -4.0),
+                               this, SLOT(select_fft_voffsetm4()));
   }
 
   submenufftvscale.setTitle("Scale");
-  if(devparms.math_fft_unit == 0)
-  {
-    submenufftvscale.addAction("1V/Div",  this, SLOT(select_fft_vscale1()));
-    submenufftvscale.addAction("2V/Div",  this, SLOT(select_fft_vscale2()));
-    submenufftvscale.addAction("5V/Div",  this, SLOT(select_fft_vscale5()));
-    submenufftvscale.addAction("10V/Div",  this, SLOT(select_fft_vscale10()));
-    submenufftvscale.addAction("20V/Div",  this, SLOT(select_fft_vscale20()));
+  if (devparms.math_fft_unit == 0) {
+    submenufftvscale.addAction("1V/Div", this, SLOT(select_fft_vscale1()));
+    submenufftvscale.addAction("2V/Div", this, SLOT(select_fft_vscale2()));
+    submenufftvscale.addAction("5V/Div", this, SLOT(select_fft_vscale5()));
+    submenufftvscale.addAction("10V/Div", this, SLOT(select_fft_vscale10()));
+    submenufftvscale.addAction("20V/Div", this, SLOT(select_fft_vscale20()));
   }
-  else
-  {
-    submenufftvscale.addAction("1dB/Div",  this, SLOT(select_fft_vscale1()));
-    submenufftvscale.addAction("2dB/Div",  this, SLOT(select_fft_vscale2()));
-    submenufftvscale.addAction("5dB/Div",  this, SLOT(select_fft_vscale5()));
-    submenufftvscale.addAction("10dB/Div",  this, SLOT(select_fft_vscale10()));
-    submenufftvscale.addAction("20dB/Div",  this, SLOT(select_fft_vscale20()));
+  else {
+    submenufftvscale.addAction("1dB/Div", this, SLOT(select_fft_vscale1()));
+    submenufftvscale.addAction("2dB/Div", this, SLOT(select_fft_vscale2()));
+    submenufftvscale.addAction("5dB/Div", this, SLOT(select_fft_vscale5()));
+    submenufftvscale.addAction("10dB/Div", this, SLOT(select_fft_vscale10()));
+    submenufftvscale.addAction("20dB/Div", this, SLOT(select_fft_vscale20()));
   }
 
   submenufftsrc.setTitle("Source");
-  submenufftsrc.addAction("CH1",  this, SLOT(select_fft_ch1()));
-  submenufftsrc.addAction("CH2",  this, SLOT(select_fft_ch2()));
-  if(devparms.channel_cnt > 2)
-  {
-    submenufftsrc.addAction("CH3",  this, SLOT(select_fft_ch3()));
-    submenufftsrc.addAction("CH4",  this, SLOT(select_fft_ch4()));
+  submenufftsrc.addAction("CH1", this, SLOT(select_fft_ch1()));
+  submenufftsrc.addAction("CH2", this, SLOT(select_fft_ch2()));
+  if (devparms.channel_cnt > 2) {
+    submenufftsrc.addAction("CH3", this, SLOT(select_fft_ch3()));
+    submenufftsrc.addAction("CH4", this, SLOT(select_fft_ch4()));
   }
   actionList = submenufftsrc.actions();
-  if(devparms.math_fft_src == 0)
-  {
+  if (devparms.math_fft_src == 0) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else if(devparms.math_fft_src == 1)
-    {
-      actionList[1]->setCheckable(true);
-      actionList[1]->setChecked(true);
-    }
-    else if(devparms.math_fft_src == 2)
-      {
-        actionList[2]->setCheckable(true);
-        actionList[2]->setChecked(true);
-      }
-      else if(devparms.math_fft_src == 3)
-        {
-          actionList[3]->setCheckable(true);
-          actionList[3]->setChecked(true);
-        }
+  else if (devparms.math_fft_src == 1) {
+    actionList[1]->setCheckable(true);
+    actionList[1]->setChecked(true);
+  }
+  else if (devparms.math_fft_src == 2) {
+    actionList[2]->setCheckable(true);
+    actionList[2]->setChecked(true);
+  }
+  else if (devparms.math_fft_src == 3) {
+    actionList[3]->setCheckable(true);
+    actionList[3]->setChecked(true);
+  }
 
   submenufft.setTitle("FFT");
-  submenufft.addAction("On",     this, SLOT(toggle_fft()));
-  submenufft.addAction("Off",    this, SLOT(toggle_fft()));
-  submenufft.addAction("Full",   this, SLOT(toggle_fft_split()));
-  submenufft.addAction("Half",   this, SLOT(toggle_fft_split()));
-  submenufft.addAction("Vrms",   this, SLOT(toggle_fft_unit()));
+  submenufft.addAction("On", this, SLOT(toggle_fft()));
+  submenufft.addAction("Off", this, SLOT(toggle_fft()));
+  submenufft.addAction("Full", this, SLOT(toggle_fft_split()));
+  submenufft.addAction("Half", this, SLOT(toggle_fft_split()));
+  submenufft.addAction("Vrms", this, SLOT(toggle_fft_unit()));
   submenufft.addAction("dB/dBm", this, SLOT(toggle_fft_unit()));
   submenufft.addMenu(&submenufftsrc);
   submenufft.addMenu(&submenufftctr);
@@ -2703,33 +2260,27 @@ void UI_Mainwindow::math_menu()
   submenufft.addMenu(&submenufftoffset);
   submenufft.addMenu(&submenufftvscale);
   actionList = submenufft.actions();
-  if(devparms.math_fft == 1)
-  {
+  if (devparms.math_fft == 1) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else
-  {
+  else {
     actionList[1]->setCheckable(true);
     actionList[1]->setChecked(true);
   }
-  if(devparms.math_fft_split == 0)
-  {
+  if (devparms.math_fft_split == 0) {
     actionList[2]->setCheckable(true);
     actionList[2]->setChecked(true);
   }
-  else
-  {
+  else {
     actionList[3]->setCheckable(true);
     actionList[3]->setChecked(true);
   }
-  if(devparms.math_fft_unit == 0)
-  {
+  if (devparms.math_fft_unit == 0) {
     actionList[4]->setCheckable(true);
     actionList[4]->setChecked(true);
   }
-  else
-  {
+  else {
     actionList[5]->setCheckable(true);
     actionList[5]->setChecked(true);
   }
@@ -2738,447 +2289,170 @@ void UI_Mainwindow::math_menu()
 
   menu.addAction("Decode", this, SLOT(show_decode_window()));
 
-  menu.exec(mathMenuButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(mathMenuButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::chan_coupling_ac()
 {
-  char str[512];
-
   devparms.chancoupling[devparms.activechannel] = 2;
 
-  snprintf(str, 512, "Channel %i coupling: AC", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 coupling: AC").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:COUP AC", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:COUP AC").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::chan_coupling_dc()
 {
-  char str[512];
-
   devparms.chancoupling[devparms.activechannel] = 1;
 
-  snprintf(str, 512, "Channel %i coupling: DC", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 coupling: DC").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:COUP DC", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:COUP DC").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::chan_coupling_gnd()
 {
-  char str[512];
-
   devparms.chancoupling[devparms.activechannel] = 0;
 
-  snprintf(str, 512, "Channel %i coupling: GND", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 coupling: GND").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:COUP GND", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:COUP GND").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
 
-
 void UI_Mainwindow::chan_unit_v()
 {
-  char str[512];
-
   devparms.chanunit[devparms.activechannel] = 0;
 
-  snprintf(str, 512, "Channel %i units: Volt", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 units: Volt").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:UNIT VOLT", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:UNIT VOLT").arg(devparms.activechannel + 1).toLocal8Bit().data());
 }
-
 
 void UI_Mainwindow::chan_unit_w()
 {
-  char str[512];
-
   devparms.chanunit[devparms.activechannel] = 1;
 
-  snprintf(str, 512, "Channel %i units: Watt", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 units: Watt").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:UNIT WATT", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:UNIT WATT").arg(devparms.activechannel + 1).toLocal8Bit().data());
 }
-
 
 void UI_Mainwindow::chan_unit_a()
 {
-  char str[512];
-
   devparms.chanunit[devparms.activechannel] = 2;
 
-  snprintf(str, 512, "Channel %i units: Ampere", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 units: Ampere").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:UNIT AMP", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:UNIT AMP").arg(devparms.activechannel + 1).toLocal8Bit().data());
 }
-
 
 void UI_Mainwindow::chan_unit_u()
 {
-  char str[512];
-
   devparms.chanunit[devparms.activechannel] = 3;
 
-  snprintf(str, 512, "Channel %i units: Unknown", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 units: Unknown").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:UNIT UNKN", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:UNIT UNKN").arg(devparms.activechannel + 1).toLocal8Bit().data());
 }
 
+void UI_Mainwindow::set_chan_probe(double val)
+{
+  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
+  devparms.chanprobe[devparms.activechannel] = val;
+  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
+
+  statusLabel->setText(QString("Channel %i probe: %2X").arg(devparms.activechannel + 1).arg(val));
+
+  set_cue_cmd(QString(":CHAN%1:PROB %2").arg(devparms.activechannel + 1).arg(devparms.chanprobe[devparms.activechannel])
+                                        .toLocal8Bit().data());
+}
 
 void UI_Mainwindow::chan_probe_001()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 0.01;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 0.01X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(0.01);
 }
-
 
 void UI_Mainwindow::chan_probe_002()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 0.02;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 0.02X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(0.02);
 }
-
 
 void UI_Mainwindow::chan_probe_005()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 0.05;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 0.05X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(0.05);
 }
-
 
 void UI_Mainwindow::chan_probe_01()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 0.1;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 0.1X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(0.1);
 }
-
 
 void UI_Mainwindow::chan_probe_02()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 0.2;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 0.2X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(0.2);
 }
-
 
 void UI_Mainwindow::chan_probe_05()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 0.5;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 0.5X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(0.5);
 }
-
 
 void UI_Mainwindow::chan_probe_1()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 1;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 1X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(1);
 }
-
 
 void UI_Mainwindow::chan_probe_2()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 2;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 2X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(2);
 }
-
 
 void UI_Mainwindow::chan_probe_5()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 5;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 5X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(5);
 }
-
 
 void UI_Mainwindow::chan_probe_10()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 10;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 10X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(10);
 }
-
 
 void UI_Mainwindow::chan_probe_20()
 {
   char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 20;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 20X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(20);
 }
-
 
 void UI_Mainwindow::chan_probe_50()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 50;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 50X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(50);
 }
-
 
 void UI_Mainwindow::chan_probe_100()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 100;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 100X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(100);
 }
-
 
 void UI_Mainwindow::chan_probe_200()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 200;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 200X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(200);
 }
-
 
 void UI_Mainwindow::chan_probe_500()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 500;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 500X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(500);
 }
-
 
 void UI_Mainwindow::chan_probe_1000()
 {
-  char str[512];
-
-  devparms.chanscale[devparms.activechannel] /= devparms.chanprobe[devparms.activechannel];
-
-  devparms.chanprobe[devparms.activechannel] = 1000;
-
-  devparms.chanscale[devparms.activechannel] *= devparms.chanprobe[devparms.activechannel];
-
-  snprintf(str, 512, "Channel %i probe: 1000X", devparms.activechannel + 1);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:PROB %e", devparms.activechannel + 1, devparms.chanprobe[devparms.activechannel]);
-
-  set_cue_cmd(str);
+  set_chan_probe(1000);
 }
-
 
 void UI_Mainwindow::chan_bwl_off()
 {
@@ -3186,171 +2460,117 @@ void UI_Mainwindow::chan_bwl_off()
 
   devparms.chanbwlimit[devparms.activechannel] = 0;
 
-  snprintf(str, 512, "Channel %i bandwidth limit: Off", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 bandwidth limit: Off").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:BWL OFF", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:BWL OFF").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::chan_bwl_20()
 {
-  char str[512];
-
   devparms.chanbwlimit[devparms.activechannel] = 20;
 
-  snprintf(str, 512, "Channel %i bandwidth limit: 20MHz", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 bandwidth limit: 20MHz").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:BWL 20M", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:BWL 20M").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::chan_bwl_100()
 {
-  char str[512];
-
   devparms.chanbwlimit[devparms.activechannel] = 100;
 
-  snprintf(str, 512, "Channel %i bandwidth limit: 100MHz", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 bandwidth limit: 100MHz").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:BWL 100M", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:BWL 100M").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::chan_bwl_200()
 {
-  char str[512];
-
   devparms.chanbwlimit[devparms.activechannel] = 200;
 
-  snprintf(str, 512, "Channel %i bandwidth limit: 200MHz", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 bandwidth limit: 200MHz").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:BWL 200M", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:BWL 200M").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::chan_bwl_250()
 {
-  char str[512];
-
   devparms.chanbwlimit[devparms.activechannel] = 250;
 
-  snprintf(str, 512, "Channel %i bandwidth limit: 250MHz", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 bandwidth limit: 250MHz").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:BWL 250M", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:BWL 250M").arg(devparms.activechannel + 1).toLocal8Bit().data());
 
   updateLabels();
 }
-
 
 void UI_Mainwindow::updateLabels()
 {
   int chn;
 
-  char str[512];
+  QString label;
 
-  for(chn=0; chn<devparms.channel_cnt; chn++)
-  {
-    str[0] = 0;
+  for (chn = 0; chn < devparms.channel_cnt; chn++) {
 
-    if(devparms.chancoupling[chn] == 2)
-    {
-      strlcat(str, "AC", 512);
-    }
+    if (devparms.chancoupling[chn] == 2)
+      label += "AC";
 
-    if(devparms.chanimpedance[chn])
-    {
-      strlcat(str, " 50", 512);
-    }
+    if (devparms.chanimpedance[chn])
+      label += " 50";
 
-    if(devparms.chanbwlimit[chn])
-    {
-      strlcat(str, " BW", 512);
-    }
+    if (devparms.chanbwlimit[chn])
+      label += " BW";
 
-    switch(chn)
-    {
-      case 0: ch1InputLabel->setText(str);
-              break;
-      case 1: ch2InputLabel->setText(str);
-              break;
-      case 2: ch3InputLabel->setText(str);
-              break;
-      case 3: ch4InputLabel->setText(str);
-              break;
+    switch (chn) {
+      case 0:
+        ch1InputLabel->setText(label);
+        break;
+      case 1:
+        ch2InputLabel->setText(label);
+        break;
+      case 2:
+        ch3InputLabel->setText(label);
+        break;
+      case 3:
+        ch4InputLabel->setText(label);
+        break;
     }
   }
 }
 
-
 void UI_Mainwindow::chan_invert_on()
 {
-  char str[512];
-
-  if(!devparms.chaninvert[devparms.activechannel])
-  {
+  if (!devparms.chaninvert[devparms.activechannel]) {
     devparms.triggeredgelevel[devparms.activechannel] *= -1;
   }
 
   devparms.chaninvert[devparms.activechannel] = 1;
 
-  snprintf(str, 512, "Channel %i inverted: On", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 inverted: On").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:INV 1", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:INV 1").arg(devparms.activechannel + 1).toLocal8Bit().data());
 }
-
 
 void UI_Mainwindow::chan_invert_off()
 {
-  char str[512];
 
-  if(devparms.chaninvert[devparms.activechannel])
-  {
+  if (devparms.chaninvert[devparms.activechannel]) {
     devparms.triggeredgelevel[devparms.activechannel] *= -1;
   }
 
   devparms.chaninvert[devparms.activechannel] = 0;
 
-  snprintf(str, 512, "Channel %i inverted: Off", devparms.activechannel + 1);
+  statusLabel->setText(QString("Channel %1 inverted: Off").arg(devparms.activechannel + 1));
 
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:INV 0", devparms.activechannel + 1);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:INV 0").arg(devparms.activechannel + 1).toLocal8Bit().data());
 }
-
 
 void UI_Mainwindow::vertOffsetDialClicked(QPoint)
 {
@@ -3361,10 +2581,7 @@ void UI_Mainwindow::vertOffsetDialClicked(QPoint)
 //   menu.exec(vertOffsetDial->mapToGlobal(QPoint(0,0)));
   int chn;
 
-  char str[512];
-
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
@@ -3372,19 +2589,13 @@ void UI_Mainwindow::vertOffsetDialClicked(QPoint)
 
   devparms.chanoffset[chn] = 0;
 
-  snprintf(str, 512, "Channel %i offset: ", chn + 1);
+  statusLabel->setText(QString("Channel %1 offset: %2%3")
+                           .arg(chn + 1)
+                           .arg(suffixed_metric_value(devparms.chanoffset[chn], 2)
+                                    .arg(QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[chn]], 2))));
 
-  convert_to_metric_suffix(str + strlen(str), devparms.chanoffset[chn], 2, 512 - strlen(str));
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[chn]], 512);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":CHAN%i:OFFS %e", chn + 1, devparms.chanoffset[chn]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":CHAN%1:OFFS %2").arg(chn + 1).arg(devparms.chanoffset[chn]).toLocal8Bit().data());
 }
-
 
 void UI_Mainwindow::clearButtonClicked()
 {
@@ -3395,11 +2606,9 @@ void UI_Mainwindow::clearButtonClicked()
   waveForm->clear();
 }
 
-
 void UI_Mainwindow::autoButtonClicked()
 {
-  if((device == NULL) || (!devparms.connected))
-  {
+  if ((device == NULL) || (!devparms.connected)) {
     return;
   }
 
@@ -3416,23 +2625,19 @@ void UI_Mainwindow::autoButtonClicked()
   scrn_timer->start(devparms.screentimerival);
 }
 
-
 void UI_Mainwindow::runButtonClicked()
 {
-  if(devparms.triggerstatus == 5)
-  {
+  if (devparms.triggerstatus == 5) {
     statusLabel->setText("Trigger: run");
 
     set_cue_cmd(":RUN");
   }
-  else
-  {
+  else {
     statusLabel->setText("Trigger: stop");
 
     set_cue_cmd(":STOP");
   }
 }
-
 
 void UI_Mainwindow::singleButtonClicked()
 {
@@ -3441,19 +2646,15 @@ void UI_Mainwindow::singleButtonClicked()
   set_cue_cmd(":SING");
 }
 
-
 void UI_Mainwindow::adjustDialClicked(QPoint)
 {
-  if(adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF)
-  {
-    if(devparms.modelserie == 1)
-    {
+  if (adjDialFunc == ADJ_DIAL_FUNC_HOLDOFF) {
+    if (devparms.modelserie == 1) {
       devparms.triggerholdoff = 1.6e-8;
 
       statusLabel->setText("Holdoff: 16ns");
     }
-    else
-    {
+    else {
       devparms.triggerholdoff = 1e-7;
 
       statusLabel->setText("Holdoff: 100ns");
@@ -3461,38 +2662,33 @@ void UI_Mainwindow::adjustDialClicked(QPoint)
   }
 }
 
-
 void UI_Mainwindow::horMenuButtonClicked()
 {
   QMenu menu,
-        submenudelayed;
+      submenudelayed;
 
   QList<QAction *> actionList;
 
   submenudelayed.setTitle("Delayed");
-  submenudelayed.addAction("On",  this, SLOT(horizontal_delayed_on()));
+  submenudelayed.addAction("On", this, SLOT(horizontal_delayed_on()));
   submenudelayed.addAction("Off", this, SLOT(horizontal_delayed_off()));
   actionList = submenudelayed.actions();
-  if(devparms.timebasedelayenable == 1)
-  {
+  if (devparms.timebasedelayenable == 1) {
     actionList[0]->setCheckable(true);
     actionList[0]->setChecked(true);
   }
-  else
-  {
+  else {
     actionList[1]->setCheckable(true);
     actionList[1]->setChecked(true);
   }
   menu.addMenu(&submenudelayed);
 
-  menu.exec(horMenuButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(horMenuButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::horizontal_delayed_on()
 {
-  if(devparms.timebasedelayenable)
-  {
+  if (devparms.timebasedelayenable) {
     return;
   }
 
@@ -3505,11 +2701,9 @@ void UI_Mainwindow::horizontal_delayed_on()
   devparms.timebasedelayoffset = devparms.timebaseoffset;
 }
 
-
 void UI_Mainwindow::horizontal_delayed_off()
 {
-  if(!devparms.timebasedelayenable)
-  {
+  if (!devparms.timebasedelayenable) {
     return;
   }
 
@@ -3520,19 +2714,16 @@ void UI_Mainwindow::horizontal_delayed_off()
   set_cue_cmd(":TIM:DEL:ENAB 0");
 }
 
-
 void UI_Mainwindow::horizontal_delayed_toggle()
 {
-  if(devparms.timebasedelayenable)
-  {
+  if (devparms.timebasedelayenable) {
     devparms.timebasedelayenable = 0;
 
     statusLabel->setText("Delayed timebase disabled");
 
     set_cue_cmd(":TIM:DEL:ENAB 0");
   }
-  else
-  {
+  else {
     devparms.timebasedelayenable = 1;
 
     statusLabel->setText("Delayed timebase enabled");
@@ -3541,81 +2732,54 @@ void UI_Mainwindow::horizontal_delayed_toggle()
   }
 }
 
-
 void UI_Mainwindow::horPosDialClicked(QPoint)
 {
-  char str[512];
-
-  if(devparms.timebasedelayenable)
-  {
+  if (devparms.timebasedelayenable) {
     devparms.timebasedelayoffset = devparms.timebaseoffset;
 
-    strlcpy(str, "Delayed timebase position: ", 512);
+    statusLabel->setText(QString("Delayed timebase position: %1s")
+                             .arg(suffixed_metric_value(devparms.timebasedelayoffset, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebasedelayoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TIM:DEL:OFFS %e", devparms.timebasedelayoffset);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TIM:DEL:OFFS %1").arg(devparms.timebasedelayoffset).toLocal8Bit().data());
   }
-  else
-  {
+  else {
     devparms.timebaseoffset = 0;
 
-    strlcpy(str, "Horizontal position: ", 512);
+    statusLabel->setText(QString("Horizontal position: %1s").arg(suffixed_metric_value(devparms.timebaseoffset, 2)));
 
-    convert_to_metric_suffix(str + strlen(str), devparms.timebaseoffset, 2, 512 - strlen(str));
-
-    strlcat(str, "s", 512);
-
-    statusLabel->setText(str);
-
-    snprintf(str, 512, ":TIM:OFFS %e", devparms.timebaseoffset);
-
-    set_cue_cmd(str);
+    set_cue_cmd(QString(":TIM:OFFS %1").arg(devparms.timebaseoffset).toLocal8Bit().data());
   }
 }
-
 
 void UI_Mainwindow::horScaleDialClicked(QPoint)
 {
   horizontal_delayed_toggle();
 }
 
-
 void UI_Mainwindow::measureButtonClicked()
 {
   int i;
 
   QMenu menu,
-        submenucounter;
+      submenucounter;
 
   QList<QAction *> actionList;
 
   submenucounter.setTitle("Counter");
   submenucounter.addAction("OFF", this, SLOT(counter_off()));
   submenucounter.addAction("CH1", this, SLOT(counter_ch1()));
-  if(devparms.channel_cnt > 1)
-  {
+  if (devparms.channel_cnt > 1) {
     submenucounter.addAction("CH2", this, SLOT(counter_ch2()));
   }
-  if(devparms.channel_cnt > 2)
-  {
+  if (devparms.channel_cnt > 2) {
     submenucounter.addAction("CH3", this, SLOT(counter_ch3()));
   }
-  if(devparms.channel_cnt > 3)
-  {
+  if (devparms.channel_cnt > 3) {
     submenucounter.addAction("CH4", this, SLOT(counter_ch4()));
   }
   actionList = submenucounter.actions();
-  for(i=0; i<5; i++)
-  {
-    if(devparms.countersrc == i)
-    {
+  for (i = 0; i < 5; i++) {
+    if (devparms.countersrc == i) {
       actionList[i]->setCheckable(true);
       actionList[i]->setChecked(true);
 
@@ -3624,9 +2788,8 @@ void UI_Mainwindow::measureButtonClicked()
   }
   menu.addMenu(&submenucounter);
 
-  menu.exec(measureButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(measureButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::counter_off()
 {
@@ -3637,7 +2800,6 @@ void UI_Mainwindow::counter_off()
   set_cue_cmd(":MEAS:COUN:SOUR OFF");
 }
 
-
 void UI_Mainwindow::counter_ch1()
 {
   devparms.countersrc = 1;
@@ -3646,7 +2808,6 @@ void UI_Mainwindow::counter_ch1()
 
   set_cue_cmd(":MEAS:COUN:SOUR CHAN1");
 }
-
 
 void UI_Mainwindow::counter_ch2()
 {
@@ -3657,7 +2818,6 @@ void UI_Mainwindow::counter_ch2()
   set_cue_cmd(":MEAS:COUN:SOUR CHAN2");
 }
 
-
 void UI_Mainwindow::counter_ch3()
 {
   devparms.countersrc = 3;
@@ -3666,7 +2826,6 @@ void UI_Mainwindow::counter_ch3()
 
   set_cue_cmd(":MEAS:COUN:SOUR CHAN3");
 }
-
 
 void UI_Mainwindow::counter_ch4()
 {
@@ -3677,78 +2836,68 @@ void UI_Mainwindow::counter_ch4()
   set_cue_cmd(":MEAS:COUN:SOUR CHAN4");
 }
 
-
 void UI_Mainwindow::trigModeButtonClicked()
 {
   devparms.triggersweep++;
 
   devparms.triggersweep %= 3;
 
-  switch(devparms.triggersweep)
-  {
-    case 0: trigModeAutoLed->setValue(true);
-            trigModeSingLed->setValue(false);
-            statusLabel->setText("Trigger auto");
-            set_cue_cmd(":TRIG:SWE AUTO");
-            break;
-    case 1: trigModeNormLed->setValue(true);
-            trigModeAutoLed->setValue(false);
-            statusLabel->setText("Trigger norm");
-            set_cue_cmd(":TRIG:SWE NORM");
-            break;
-    case 2: trigModeSingLed->setValue(true);
-            trigModeNormLed->setValue(false);
-            statusLabel->setText("Trigger single");
-            set_cue_cmd(":TRIG:SWE SING");
-            break;
+  switch (devparms.triggersweep) {
+    case 0:
+      trigModeAutoLed->setValue(true);
+      trigModeSingLed->setValue(false);
+      statusLabel->setText("Trigger auto");
+      set_cue_cmd(":TRIG:SWE AUTO");
+      break;
+    case 1:
+      trigModeNormLed->setValue(true);
+      trigModeAutoLed->setValue(false);
+      statusLabel->setText("Trigger norm");
+      set_cue_cmd(":TRIG:SWE NORM");
+      break;
+    case 2:
+      trigModeSingLed->setValue(true);
+      trigModeNormLed->setValue(false);
+      statusLabel->setText("Trigger single");
+      set_cue_cmd(":TRIG:SWE SING");
+      break;
   }
 }
-
 
 void UI_Mainwindow::trigMenuButtonClicked()
 {
   int i;
 
-  char str[512];
-
   QMenu menu,
-        submenusource,
-        submenuslope,
-        submenucoupling,
-        submenusetting;
+      submenusource,
+      submenuslope,
+      submenucoupling,
+      submenusetting;
 
   QList<QAction *> actionList;
 
   submenusource.setTitle("Source");
   submenusource.addAction("CH1", this, SLOT(trigger_source_ch1()));
-  if(devparms.channel_cnt > 1)
-  {
+  if (devparms.channel_cnt > 1) {
     submenusource.addAction("CH2", this, SLOT(trigger_source_ch2()));
   }
-  if(devparms.channel_cnt > 2)
-  {
+  if (devparms.channel_cnt > 2) {
     submenusource.addAction("CH3", this, SLOT(trigger_source_ch3()));
   }
-  if(devparms.channel_cnt > 3)
-  {
+  if (devparms.channel_cnt > 3) {
     submenusource.addAction("CH4", this, SLOT(trigger_source_ch4()));
   }
-  if(devparms.modelserie != 1)
-  {
+  if (devparms.modelserie != 1) {
     submenusource.addAction("EXT", this, SLOT(trigger_source_ext()));
-    if(devparms.modelserie != 2)
-    {
+    if (devparms.modelserie != 2) {
       submenusource.addAction("EXT/ 5", this, SLOT(trigger_source_ext5()));
     }
   }
   submenusource.addAction("AC Line", this, SLOT(trigger_source_acl()));
   actionList = submenusource.actions();
-  if(devparms.modelserie == 6 || devparms.modelserie == 4)
-  {
-    for(i=0; i<7; i++)
-    {
-      if(devparms.triggeredgesource == i)
-      {
+  if (devparms.modelserie == 6 || devparms.modelserie == 4) {
+    for (i = 0; i < 7; i++) {
+      if (devparms.triggeredgesource == i) {
         actionList[i]->setCheckable(true);
         actionList[i]->setChecked(true);
 
@@ -3756,14 +2905,10 @@ void UI_Mainwindow::trigMenuButtonClicked()
       }
     }
   }
-  else
-  {
-    if(devparms.modelserie == 1)
-    {
-      for(i=0; i<4; i++)
-      {
-        if(devparms.triggeredgesource == i)
-        {
+  else {
+    if (devparms.modelserie == 1) {
+      for (i = 0; i < 4; i++) {
+        if (devparms.triggeredgesource == i) {
           actionList[i]->setCheckable(true);
           actionList[i]->setChecked(true);
 
@@ -3772,12 +2917,9 @@ void UI_Mainwindow::trigMenuButtonClicked()
       }
     }
 
-    if(devparms.modelserie == 2)
-    {
-      for(i=0; i<5; i++)
-      {
-        if(devparms.triggeredgesource == i)
-        {
+    if (devparms.modelserie == 2) {
+      for (i = 0; i < 5; i++) {
+        if (devparms.triggeredgesource == i) {
           actionList[i]->setCheckable(true);
           actionList[i]->setChecked(true);
 
@@ -3786,8 +2928,7 @@ void UI_Mainwindow::trigMenuButtonClicked()
       }
     }
 
-    if(devparms.triggeredgesource == 6)
-    {
+    if (devparms.triggeredgesource == 6) {
       actionList[4]->setCheckable(true);
       actionList[4]->setChecked(true);
     }
@@ -3800,10 +2941,8 @@ void UI_Mainwindow::trigMenuButtonClicked()
   submenucoupling.addAction("LF reject", this, SLOT(trigger_coupling_lfreject()));
   submenucoupling.addAction("HF reject", this, SLOT(trigger_coupling_hfreject()));
   actionList = submenucoupling.actions();
-  for(i=0; i<4; i++)
-  {
-    if(devparms.triggercoupling == i)
-    {
+  for (i = 0; i < 4; i++) {
+    if (devparms.triggercoupling == i) {
       actionList[i]->setCheckable(true);
       actionList[i]->setChecked(true);
 
@@ -3817,10 +2956,8 @@ void UI_Mainwindow::trigMenuButtonClicked()
   submenuslope.addAction("Negative", this, SLOT(trigger_slope_neg()));
   submenuslope.addAction("Rise/Fal", this, SLOT(trigger_slope_rfal()));
   actionList = submenuslope.actions();
-  for(i=0; i<3; i++)
-  {
-    if(devparms.triggeredgeslope == i)
-    {
+  for (i = 0; i < 3; i++) {
+    if (devparms.triggeredgeslope == i) {
       actionList[i]->setCheckable(true);
       actionList[i]->setChecked(true);
 
@@ -3830,15 +2967,12 @@ void UI_Mainwindow::trigMenuButtonClicked()
   menu.addMenu(&submenuslope);
 
   submenusetting.setTitle("Setting");
-  snprintf(str, 512, "Holdoff ");
-  convert_to_metric_suffix(str + strlen(str), devparms.triggerholdoff, 3, 512 - strlen(str));
-  strlcat(str, "S", 512);
-  submenusetting.addAction(str, this, SLOT(trigger_setting_holdoff()));
+  submenusetting.addAction(QString("Holdoff %1S").arg(suffixed_metric_value(devparms.triggerholdoff, 3)),
+                           this, SLOT(trigger_setting_holdoff()));
   menu.addMenu(&submenusetting);
 
-  menu.exec(trigMenuButton->mapToGlobal(QPoint(0,0)));
+  menu.exec(trigMenuButton->mapToGlobal(QPoint(0, 0)));
 }
-
 
 void UI_Mainwindow::trigger_source_ch1()
 {
@@ -3849,7 +2983,6 @@ void UI_Mainwindow::trigger_source_ch1()
   set_cue_cmd(":TRIG:EDG:SOUR CHAN1");
 }
 
-
 void UI_Mainwindow::trigger_source_ch2()
 {
   devparms.triggeredgesource = 1;
@@ -3858,7 +2991,6 @@ void UI_Mainwindow::trigger_source_ch2()
 
   set_cue_cmd(":TRIG:EDG:SOUR CHAN2");
 }
-
 
 void UI_Mainwindow::trigger_source_ch3()
 {
@@ -3869,7 +3001,6 @@ void UI_Mainwindow::trigger_source_ch3()
   set_cue_cmd(":TRIG:EDG:SOUR CHAN3");
 }
 
-
 void UI_Mainwindow::trigger_source_ch4()
 {
   devparms.triggeredgesource = 3;
@@ -3878,7 +3009,6 @@ void UI_Mainwindow::trigger_source_ch4()
 
   set_cue_cmd(":TRIG:EDG:SOUR CHAN4");
 }
-
 
 void UI_Mainwindow::trigger_source_ext()
 {
@@ -3889,7 +3019,6 @@ void UI_Mainwindow::trigger_source_ext()
   set_cue_cmd(":TRIG:EDG:SOUR EXT");
 }
 
-
 void UI_Mainwindow::trigger_source_ext5()
 {
   devparms.triggeredgesource = 5;
@@ -3899,23 +3028,19 @@ void UI_Mainwindow::trigger_source_ext5()
   set_cue_cmd(":TRIG:EDG:SOUR EXT5");
 }
 
-
 void UI_Mainwindow::trigger_source_acl()
 {
   devparms.triggeredgesource = 6;
 
   statusLabel->setText("Trigger source AC powerline");
 
-  if(devparms.modelserie != 1)
-  {
+  if (devparms.modelserie != 1) {
     set_cue_cmd(":TRIG:EDG:SOUR ACL");
   }
-  else
-  {
+  else {
     set_cue_cmd(":TRIG:EDG:SOUR AC");
   }
 }
-
 
 void UI_Mainwindow::trigger_coupling_ac()
 {
@@ -3926,7 +3051,6 @@ void UI_Mainwindow::trigger_coupling_ac()
   set_cue_cmd(":TRIG:COUP AC");
 }
 
-
 void UI_Mainwindow::trigger_coupling_dc()
 {
   devparms.triggercoupling = 1;
@@ -3935,7 +3059,6 @@ void UI_Mainwindow::trigger_coupling_dc()
 
   set_cue_cmd(":TRIG:COUP DC");
 }
-
 
 void UI_Mainwindow::trigger_coupling_lfreject()
 {
@@ -3946,7 +3069,6 @@ void UI_Mainwindow::trigger_coupling_lfreject()
   set_cue_cmd(":TRIG:COUP LFR");
 }
 
-
 void UI_Mainwindow::trigger_coupling_hfreject()
 {
   devparms.triggercoupling = 3;
@@ -3955,7 +3077,6 @@ void UI_Mainwindow::trigger_coupling_hfreject()
 
   set_cue_cmd(":TRIG:COUP HFR");
 }
-
 
 void UI_Mainwindow::trigger_slope_pos()
 {
@@ -3966,7 +3087,6 @@ void UI_Mainwindow::trigger_slope_pos()
   set_cue_cmd(":TRIG:EDG:SLOP POS");
 }
 
-
 void UI_Mainwindow::trigger_slope_neg()
 {
   devparms.triggeredgeslope = 1;
@@ -3976,7 +3096,6 @@ void UI_Mainwindow::trigger_slope_neg()
   set_cue_cmd(":TRIG:EDG:SLOP NEG");
 }
 
-
 void UI_Mainwindow::trigger_slope_rfal()
 {
   devparms.triggeredgeslope = 2;
@@ -3985,7 +3104,6 @@ void UI_Mainwindow::trigger_slope_rfal()
 
   set_cue_cmd(":TRIG:EDG:SLOP RFAL");
 }
-
 
 void UI_Mainwindow::trigger_setting_holdoff()
 {
@@ -4000,14 +3118,12 @@ void UI_Mainwindow::trigger_setting_holdoff()
   adjdial_timer->start(ADJDIAL_TIMER_IVAL_1);
 }
 
-
 void UI_Mainwindow::trigForceButtonClicked()
 {
   statusLabel->setText("Trigger force");
 
   set_cue_cmd(":TFOR");
 }
-
 
 void UI_Mainwindow::trig50pctButtonClicked()
 {
@@ -4018,52 +3134,38 @@ void UI_Mainwindow::trig50pctButtonClicked()
   waveForm->setTrigLineVisible();
 }
 
-
 void UI_Mainwindow::trigAdjustDialClicked(QPoint)
 {
-  char str[512];
-
   devparms.triggeredgelevel[devparms.triggeredgesource] = 0;
 
-  strlcpy(str, "Trigger level: ", 512);
+  statusLabel->setText(QString("Trigger level: %1%2")
+                           .arg(suffixed_metric_value(devparms.triggeredgelevel[devparms.triggeredgesource], 2))
+                           .arg(QString::fromLocal8Bit(devparms.chanunitstr[devparms.chanunit[devparms
+                               .triggeredgesource]], 2)));
 
-  convert_to_metric_suffix(str + strlen(str), devparms.triggeredgelevel[devparms.triggeredgesource], 2, 512 - strlen(str));
-
-  strlcat(str, devparms.chanunitstr[devparms.chanunit[devparms.triggeredgesource]], 512);
-
-  statusLabel->setText(str);
-
-  snprintf(str, 512, ":TRIG:EDG:LEV %e", devparms.triggeredgelevel[devparms.triggeredgesource]);
-
-  set_cue_cmd(str);
+  set_cue_cmd(QString(":TRIG:EDG:LEV %1").arg(devparms.triggeredgelevel[devparms.triggeredgesource]).toStdString()
+                                         .c_str());
 }
-
 
 void UI_Mainwindow::toggle_fft()
 {
-  if(devparms.math_fft == 1)
-  {
+  if (devparms.math_fft == 1) {
     devparms.math_fft = 0;
 
-    if(devparms.modelserie != 1)
-    {
+    if (devparms.modelserie != 1) {
       set_cue_cmd(":CALC:MODE OFF");
     }
-    else
-    {
+    else {
       set_cue_cmd(":MATH:DISP OFF");
     }
 
     statusLabel->setText("Math display off");
   }
-  else
-  {
-    if(devparms.modelserie != 1)
-    {
+  else {
+    if (devparms.modelserie != 1) {
       set_cue_cmd(":CALC:MODE FFT");
     }
-    else
-    {
+    else {
       set_cue_cmd(":MATH:OPER FFT");
 
       set_cue_cmd(":MATH:DISP ON");
@@ -4075,15 +3177,12 @@ void UI_Mainwindow::toggle_fft()
   }
 }
 
-
 void UI_Mainwindow::toggle_fft_split()
 {
   QMessageBox msgBox;
 
-  if(devparms.math_fft_split == 1)
-  {
-    if(devparms.vertdivisions == 10)
-    {
+  if (devparms.math_fft_split == 1) {
+    if (devparms.vertdivisions == 10) {
       msgBox.setIcon(QMessageBox::NoIcon);
       msgBox.setText("Can not set FFT to fullscreen when extended vertical range is set.\n"
                      "Uncheck \"Use extended vertical range\" checkbox in the settings menu first.");
@@ -4097,8 +3196,7 @@ void UI_Mainwindow::toggle_fft_split()
 
     statusLabel->setText("FFT fullscreen");
   }
-  else
-  {
+  else {
     set_cue_cmd(":MATH:FFT:SPL ON");
 
     devparms.math_fft_split = 1;
@@ -4107,84 +3205,60 @@ void UI_Mainwindow::toggle_fft_split()
   }
 }
 
-
 void UI_Mainwindow::toggle_fft_unit()
 {
-  char str[512];
-
-  if(devparms.math_fft_unit == 1)
-  {
+  if (devparms.math_fft_unit == 1) {
     devparms.fft_vscale = 1.0;
 
     devparms.fft_voffset = 0.0;
 
     devparms.math_fft_unit = 0;
 
-    if(devparms.modelserie != 1)
-    {
+    if (devparms.modelserie != 1) {
       set_cue_cmd(":CALC:FFT:VSM VRMS");
     }
-    else
-    {
+    else {
       set_cue_cmd(":MATH:FFT:UNIT VRMS");
 
-      snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
+      set_cue_cmd(QString("MATH:OFFS %1").arg(devparms.fft_voffset).toLocal8Bit().data());
 
-      set_cue_cmd(str);
+      set_cue_cmd(QString("MATH:SCAL %1").arg(devparms.fft_vscale).toLocal8Bit().data());
 
-      snprintf(str, 512, ":MATH:SCAL %e", devparms.fft_vscale);
-
-      set_cue_cmd(str);
-
-      snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString("MATH:OFFS %1").arg(devparms.fft_voffset).toLocal8Bit().data());
     }
 
     statusLabel->setText("FFT unit: Vrms");
   }
-  else
-  {
+  else {
     devparms.fft_vscale = 10.0;
 
     devparms.fft_voffset = 20.0;
 
     devparms.math_fft_unit = 1;
 
-    if(devparms.modelserie != 1)
-    {
+    if (devparms.modelserie != 1) {
       set_cue_cmd(":CALC:FFT:VSM DBVR");
     }
-    else
-    {
+    else {
       set_cue_cmd(":MATH:FFT:UNIT DB");
 
-      snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
+      set_cue_cmd(QString("MATH:OFFS %1").arg(devparms.fft_voffset).toLocal8Bit().data());
 
-      set_cue_cmd(str);
+      set_cue_cmd(QString("MATH:SCAL %1").arg(devparms.fft_vscale).toLocal8Bit().data());
 
-      snprintf(str, 512, ":MATH:SCAL %e", devparms.fft_vscale);
-
-      set_cue_cmd(str);
-
-      snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
-
-      set_cue_cmd(str);
+      set_cue_cmd(QString("MATH:OFFS %1").arg(devparms.fft_voffset).toLocal8Bit().data());
     }
 
     statusLabel->setText("FFT unit: dB");
   }
 }
 
-
 void UI_Mainwindow::select_fft_ch1()
 {
-  if(devparms.modelserie == 1)
-  {
+  if (devparms.modelserie == 1) {
     set_cue_cmd(":MATH:FFT:SOUR CHAN1");
   }
-  else
-  {
+  else {
     set_cue_cmd(":CALC:FFT:SOUR CHAN1");
   }
 
@@ -4193,15 +3267,12 @@ void UI_Mainwindow::select_fft_ch1()
   statusLabel->setText("FFT source: CH1");
 }
 
-
 void UI_Mainwindow::select_fft_ch2()
 {
-  if(devparms.modelserie == 1)
-  {
+  if (devparms.modelserie == 1) {
     set_cue_cmd(":MATH:FFT:SOUR CHAN2");
   }
-  else
-  {
+  else {
     set_cue_cmd(":CALC:FFT:SOUR CHAN2");
   }
 
@@ -4210,15 +3281,12 @@ void UI_Mainwindow::select_fft_ch2()
   statusLabel->setText("FFT source: CH2");
 }
 
-
 void UI_Mainwindow::select_fft_ch3()
 {
-  if(devparms.modelserie == 1)
-  {
+  if (devparms.modelserie == 1) {
     set_cue_cmd(":MATH:FFT:SOUR CHAN3");
   }
-  else
-  {
+  else {
     set_cue_cmd(":CALC:FFT:SOUR CHAN3");
   }
 
@@ -4227,15 +3295,12 @@ void UI_Mainwindow::select_fft_ch3()
   statusLabel->setText("FFT source: CH3");
 }
 
-
 void UI_Mainwindow::select_fft_ch4()
 {
-  if(devparms.modelserie == 1)
-  {
+  if (devparms.modelserie == 1) {
     set_cue_cmd(":MATH:FFT:SOUR CHAN4");
   }
-  else
-  {
+  else {
     set_cue_cmd(":CALC:FFT:SOUR CHAN4");
   }
 
@@ -4244,286 +3309,194 @@ void UI_Mainwindow::select_fft_ch4()
   statusLabel->setText("FFT source: CH4");
 }
 
-
 void UI_Mainwindow::select_fft_hzdiv_20()
 {
   set_fft_hzdiv(20.0);
 }
-
 
 void UI_Mainwindow::select_fft_hzdiv_40()
 {
   set_fft_hzdiv(40.0);
 }
 
-
 void UI_Mainwindow::select_fft_hzdiv_80()
 {
   set_fft_hzdiv(80.0);
 }
-
 
 void UI_Mainwindow::select_fft_hzdiv_100()
 {
   set_fft_hzdiv(100.0);
 }
 
-
 void UI_Mainwindow::select_fft_hzdiv_200()
 {
   set_fft_hzdiv(200.0);
 }
 
-
 void UI_Mainwindow::set_fft_hzdiv(double val)
 {
-  char str[512];
-
-  if(devparms.timebasedelayenable)
-  {
+  if (devparms.timebasedelayenable) {
     devparms.math_fft_hscale = (100.0 / devparms.timebasedelayscale) / val;
   }
-  else
-  {
+  else {
     devparms.math_fft_hscale = (100.0 / devparms.timebasescale) / val;
   }
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HSP %e", devparms.math_fft_hscale);
+  QString cmd;
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HSP %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HSC %e", devparms.math_fft_hscale);
+  else {
+    cmd = ":MATH:FFT:HSC %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale).toLocal8Bit().data());
 
-  strlcpy(str, "FFT scale: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale, 2, 512 - strlen(str));
-
-  strlcat(str, "Hz/Div", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT scale: %1Hz/Div").arg(suffixed_metric_value(devparms.math_fft_hscale, 2)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_5()
 {
-  char str[512];
-
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 5.0);
+  QString cmd;
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 5.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 5.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 5.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 5.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 5.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_6()
 {
-  char str[512];
-
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 6.0);
+  QString cmd;
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 6.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 6.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 6.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 6.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 6.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_7()
 {
-  char str[512];
+  QString cmd;
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 7.0);
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 7.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 7.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 7.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 7.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 7.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_8()
 {
-  char str[512];
+  QString cmd;
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 8.0);
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 8.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 8.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 8.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 8.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 8.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_9()
 {
-  char str[512];
+  QString cmd;
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 9.0);
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 9.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 9.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 9.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 9.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 9.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_10()
 {
-  char str[512];
+  QString cmd;
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 10.0);
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 10.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 10.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 10.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 10.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 10.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_11()
 {
-  char str[512];
+  QString cmd;
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 11.0);
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 11.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 11.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 11.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale *11.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 11.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_ctr_12()
 {
-  char str[512];
+  QString cmd;
 
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:HCEN %e", devparms.math_fft_hscale * 12.0);
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:HCEN %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:FFT:HCEN %e", devparms.math_fft_hscale * 12.0);
+  else {
+    cmd = ":MATH:FFT:HCEN %1";
   }
 
-  set_cue_cmd(str);
+  set_cue_cmd(cmd.arg(devparms.math_fft_hscale * 12.0).toLocal8Bit().data());
 
   devparms.math_fft_hcenter = devparms.math_fft_hscale * 12.0;
 
-  strlcpy(str, "FFT center: ", 512);
-
-  convert_to_metric_suffix(str + strlen(str), devparms.math_fft_hscale * 12.0, 1, 512 - strlen(str));
-
-  strlcat(str, "Hz", 512);
-
-  statusLabel->setText(str);
+  statusLabel->setText(QString("FFT center: %1Hz").arg(suffixed_metric_value(devparms.math_fft_hscale * 12.0, 1)));
 }
-
 
 void UI_Mainwindow::select_fft_vscale1()
 {
@@ -4532,14 +3505,12 @@ void UI_Mainwindow::select_fft_vscale1()
   set_fft_vscale();
 }
 
-
 void UI_Mainwindow::select_fft_vscale2()
 {
   devparms.fft_vscale = 2.0;
 
   set_fft_vscale();
 }
-
 
 void UI_Mainwindow::select_fft_vscale5()
 {
@@ -4548,14 +3519,12 @@ void UI_Mainwindow::select_fft_vscale5()
   set_fft_vscale();
 }
 
-
 void UI_Mainwindow::select_fft_vscale10()
 {
   devparms.fft_vscale = 10.0;
 
   set_fft_vscale();
 }
-
 
 void UI_Mainwindow::select_fft_vscale20()
 {
@@ -4564,76 +3533,56 @@ void UI_Mainwindow::select_fft_vscale20()
   set_fft_vscale();
 }
 
-
 void UI_Mainwindow::set_fft_vscale()
 {
-  char str[512];
-
-  if(device == NULL)
-  {
+  if (device == NULL) {
     return;
   }
 
-  if(!devparms.connected)
-  {
+  if (!devparms.connected) {
     return;
   }
 
-  if(devparms.activechannel < 0)
-  {
+  if (devparms.activechannel < 0) {
     return;
   }
 
-  if(devparms.fft_voffset > (devparms.fft_vscale * 4.0))
-  {
+  if (devparms.fft_voffset > (devparms.fft_vscale * 4.0)) {
     devparms.fft_voffset = (devparms.fft_vscale * 4.0);
   }
 
-  if(devparms.fft_voffset < (devparms.fft_vscale * -4.0))
-  {
+  if (devparms.fft_voffset < (devparms.fft_vscale * -4.0)) {
     devparms.fft_voffset = (devparms.fft_vscale * -4.0);
   }
 
-  if(devparms.modelserie != 1)
-  {
-    if(devparms.math_fft_unit == 1)
-    {
-      snprintf(str, 512, ":CALC:FFT:VSC %e", devparms.fft_vscale);
+  QString cmd;
+  if (devparms.modelserie != 1) {
+    QString tmpl{":CALC:FFT:VSC %1"};
 
-      set_cue_cmd(str);
+    if (devparms.math_fft_unit == 1) {
+      cmd = tmpl.arg(devparms.fft_vscale);
     }
-    else
-    {
-      snprintf(str, 512, ":CALC:FFT:VSC %e", devparms.fft_vscale / devparms.chanscale[devparms.math_fft_src]);
-
-      set_cue_cmd(str);
+    else {
+      cmd = tmpl.arg(devparms.fft_vscale / devparms.chanscale[devparms.math_fft_src]);
     }
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:SCAL %e", devparms.fft_vscale);
+  else {
+    cmd = QString(":MATH:SCAL %1").arg(devparms.fft_vscale);
+  }
+  set_cue_cmd(cmd.toLocal8Bit().data());
 
-    set_cue_cmd(str);
+  QString label{"FFT scale: %1%2"};
+  if (devparms.math_fft_unit == 0) {
+    label = label.arg(suffixed_metric_value(devparms.fft_vscale, 1)).arg("V");
+  }
+  else {
+    label = label.arg(devparms.fft_vscale, 0, 'f', 1).arg("dB/Div");
   }
 
-  if(devparms.math_fft_unit == 0)
-  {
-    strlcpy(str, "FFT scale: ", 512);
-
-    convert_to_metric_suffix(str + strlen(str), devparms.fft_vscale, 1, 512 - strlen(str));
-
-    strlcat(str, "V", 512);
-  }
-  else
-  {
-    snprintf(str, 512, "FFT scale: %+.1fdB/Div", devparms.fft_vscale);
-  }
-
-  statusLabel->setText(str);
+  statusLabel->setText(label);
 
   waveForm->update();
 }
-
 
 void UI_Mainwindow::select_fft_voffsetp4()
 {
@@ -4642,14 +3591,12 @@ void UI_Mainwindow::select_fft_voffsetp4()
   set_fft_voffset();
 }
 
-
 void UI_Mainwindow::select_fft_voffsetp3()
 {
   devparms.fft_voffset = devparms.fft_vscale * 3.0;
 
   set_fft_voffset();
 }
-
 
 void UI_Mainwindow::select_fft_voffsetp2()
 {
@@ -4658,14 +3605,12 @@ void UI_Mainwindow::select_fft_voffsetp2()
   set_fft_voffset();
 }
 
-
 void UI_Mainwindow::select_fft_voffsetp1()
 {
   devparms.fft_voffset = devparms.fft_vscale;
 
   set_fft_voffset();
 }
-
 
 void UI_Mainwindow::select_fft_voffset0()
 {
@@ -4674,14 +3619,12 @@ void UI_Mainwindow::select_fft_voffset0()
   set_fft_voffset();
 }
 
-
 void UI_Mainwindow::select_fft_voffsetm1()
 {
   devparms.fft_voffset = devparms.fft_vscale * -1.0;
 
   set_fft_voffset();
 }
-
 
 void UI_Mainwindow::select_fft_voffsetm2()
 {
@@ -4690,14 +3633,12 @@ void UI_Mainwindow::select_fft_voffsetm2()
   set_fft_voffset();
 }
 
-
 void UI_Mainwindow::select_fft_voffsetm3()
 {
   devparms.fft_voffset = devparms.fft_vscale * -3.0;
 
   set_fft_voffset();
 }
-
 
 void UI_Mainwindow::select_fft_voffsetm4()
 {
@@ -4706,38 +3647,27 @@ void UI_Mainwindow::select_fft_voffsetm4()
   set_fft_voffset();
 }
 
-
 void UI_Mainwindow::set_fft_voffset()
 {
-  char str[512];
-
-  if(devparms.modelserie != 1)
-  {
-    snprintf(str, 512, ":CALC:FFT:VOFF %e", devparms.fft_voffset);
-
-    set_cue_cmd(str);
+  QString cmd;
+  if (devparms.modelserie != 1) {
+    cmd = ":CALC:FFT:VOFF %1";
   }
-  else
-  {
-    snprintf(str, 512, ":MATH:OFFS %e", devparms.fft_voffset);
-
-    set_cue_cmd(str);
+  else {
+    cmd = ":MATH:OFFS %1";
   }
 
-  if(devparms.math_fft_unit == 0)
-  {
-    strlcpy(str, "FFT position: ", 512);
+  set_cue_cmd(cmd.arg(devparms.fft_voffset).toLocal8Bit().data());
 
-    convert_to_metric_suffix(str + strlen(str), devparms.fft_voffset, 1, 512 - strlen(str));
-
-    strlcat(str, "V", 512);
+  QString label{"FFT position: %1%2"};
+  if (devparms.math_fft_unit == 0) {
+    label = label.arg(suffixed_metric_value(devparms.fft_voffset, 1)).arg("V");
   }
-  else
-  {
-    snprintf(str, 512, "FFT position: %+.0fdB", devparms.fft_voffset);
+  else {
+    label = label.arg(devparms.fft_voffset, 0, 'f', 1).arg("dB");
   }
 
-  statusLabel->setText(str);
+  statusLabel->setText(label);
 
   waveForm->label_active = LABEL_ACTIVE_FFT;
 
@@ -4745,7 +3675,6 @@ void UI_Mainwindow::set_fft_voffset()
 
   waveForm->update();
 }
-
 
 void UI_Mainwindow::show_decode_window()
 {

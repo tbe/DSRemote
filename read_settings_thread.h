@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 #include <QObject>
+#include <QString>
 #include <QThread>
 
 #include "global.h"
@@ -56,7 +57,7 @@ public:
   void set_device(struct tmcdev *);
   void set_devparm_ptr(struct device_settings *);
   int get_error_num(void);
-  void get_error_str(char *, int);
+  QString get_error_str();
   void set_delay(int);
 
 private:
@@ -64,7 +65,7 @@ private:
   struct tmcdev *device;
   struct device_settings *devparms;
 
-  char err_str[4096];
+  QString err_str{};
 
   int err_num, delay;
 
